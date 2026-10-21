@@ -1,0 +1,221 @@
+/* Typography & Base Fonts */
+body {
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-mono {
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Public Header */
+.ctc-public-header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    width: 100%;
+    border-bottom: 1px solid #1e293b;
+    background-color: rgba(2, 6, 23, 0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    box-sizing: border-box;
+}
+
+.ctc-public-header *,
+.ctc-public-header *::before,
+.ctc-public-header *::after {
+    box-sizing: border-box;
+}
+
+.ctc-public-header .ctc-nav-inner {
+    max-width: 80rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    height: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+@media (min-width: 640px) {
+    .ctc-public-header .ctc-nav-inner {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .ctc-public-header .ctc-nav-inner {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
+.ctc-public-header .ctc-brand-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+}
+
+.ctc-public-header .ctc-logo-box {
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    border-radius: 0.5rem;
+    background-color: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #34d399;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease;
+    flex-shrink: 0;
+}
+
+.ctc-public-header .ctc-brand-group:hover .ctc-logo-box {
+    border-color: #34d399;
+}
+
+.ctc-public-header .ctc-brand-text {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: #ffffff;
+    transition: color 0.15s ease;
+    white-space: nowrap;
+}
+
+.ctc-public-header .ctc-brand-group:hover .ctc-brand-text {
+    color: #34d399;
+}
+
+.ctc-public-header nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.ctc-public-header nav a.ctc-nav-link {
+    color: #94a3b8;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    transition: color 0.15s ease;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    white-space: nowrap;
+}
+
+.ctc-public-header nav a.ctc-nav-link:hover {
+    color: #ffffff;
+}
+
+.ctc-public-header nav a.ctc-nav-link-home {
+    color: #cbd5e1;
+}
+
+.ctc-public-header nav a.ctc-nav-link-home:hover {
+    color: #ffffff;
+}
+
+/* Strict sizing for the beaker icon */
+.ctc-public-header svg,
+.ctc-public-header .ctc-beaker-icon {
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px !important;
+    min-height: 14px !important;
+    max-width: 14px !important;
+    max-height: 14px !important;
+    color: #34d399 !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    flex-shrink: 0 !important;
+}
+
+/* Public Footer */
+.ctc-public-footer {
+    border-top: 1px solid #1e293b;
+    background-color: #020617;
+    padding-top: 2.5rem;
+    padding-bottom: 2.5rem;
+    margin-top: 5rem;
+    width: 100%;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.ctc-public-footer *,
+.ctc-public-footer *::before,
+.ctc-public-footer *::after {
+    box-sizing: border-box;
+}
+
+.ctc-public-footer .ctc-footer-inner {
+    max-width: 80rem;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.ctc-public-footer .ctc-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+    text-align: center;
+    width: 100%;
+}
+
+.ctc-public-footer .ctc-footer-links a {
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    transition: color 0.15s ease;
+    display: inline-block;
+}
+
+.ctc-public-footer .ctc-footer-links a:hover {
+    color: #ffffff;
+}
+
+.ctc-public-footer p {
+    margin-top: 0.375rem;
+    margin-bottom: 0.375rem;
+    text-align: center;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    width: 100%;
+}
+
+.ctc-public-footer .ctc-footer-copy {
+    color: #64748b;
+}
+
+.ctc-public-footer .ctc-footer-sub {
+    color: #475569;
+}

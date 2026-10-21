@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Filament\Resources\Hosts\Tables;
+
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+
+/**
+ * Table configuration for Host resource.
+ */
+class HostsTable
+{
+    /**
+     * Configure the table.
+     */
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('name')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold'),
+
+                TextColumn::make('slug')
+                    ->searchable()
+                    ->sortable(),
+
+                TextColumn::make('videos_count')
+                    ->counts('videos')
+                    ->label('Videos')
+                    ->badge()
+                    ->color('info')
+                    ->sortable(),
+            ])
+            ->defaultSort('name', 'asc')
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+}
