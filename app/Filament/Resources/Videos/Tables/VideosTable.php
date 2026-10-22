@@ -109,6 +109,20 @@ class VideosTable
                     ->label('Finalized')
                     ->boolean()
                     ->sortable(),
+
+                TextColumn::make('creator.name')
+                    ->label('Created By')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('updater.name')
+                    ->label('Updated By')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('published_at', 'desc')
             ->filters([

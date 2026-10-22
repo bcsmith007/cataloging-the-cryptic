@@ -51,6 +51,21 @@
 <body class="min-h-full flex flex-col bg-slate-950 text-slate-200">
     @include('partials.header')
 
+    @if (session('status'))
+        <div class="border-b border-emerald-500/30 bg-emerald-950/80 px-4 py-3 text-center text-sm font-medium text-emerald-300">
+            <div class="mx-auto max-w-7xl">
+                <span>{{ session('status') }}</span>
+            </div>
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="border-b border-rose-500/30 bg-rose-950/80 px-4 py-3 text-center text-sm font-medium text-rose-300">
+            <div class="mx-auto max-w-7xl">
+                <span>{{ session('error') }}</span>
+            </div>
+        </div>
+    @endif
+
     <main class="flex-1">
         @yield('content')
     </main>

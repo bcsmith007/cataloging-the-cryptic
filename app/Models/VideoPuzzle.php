@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasUserTracking;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\Pivot;
  */
 class VideoPuzzle extends Pivot
 {
+    use HasUserTracking;
+
     /**
      * The table associated with the pivot model.
      *
@@ -37,6 +40,8 @@ class VideoPuzzle extends Pivot
         'order_in_video',
         'start_seconds',
         'solve_duration_seconds',
+        'created_by_id',
+        'updated_by_id',
     ];
 
     /**

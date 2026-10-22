@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
+use App\Models\Concerns\HasUserTracking;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -17,6 +18,7 @@ class Setter extends Model
 {
     use HasFactory;
     use HasSlugRouteKey;
+    use HasUserTracking;
 
     /**
      * Generate a unique URL slug for the setter.
@@ -69,6 +71,8 @@ class Setter extends Model
         'slug',
         'bio',
         'patreon_url',
+        'created_by_id',
+        'updated_by_id',
     ];
 
     /**

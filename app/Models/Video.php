@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
+use App\Models\Concerns\HasUserTracking;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,6 +21,7 @@ class Video extends Model
 {
     use HasFactory;
     use HasSlugRouteKey;
+    use HasUserTracking;
 
     /**
      * The "booted" method of the model.
@@ -64,6 +66,8 @@ class Video extends Model
         'intro_music',
         'outro_music',
         'is_finalized',
+        'created_by_id',
+        'updated_by_id',
     ];
 
     /**

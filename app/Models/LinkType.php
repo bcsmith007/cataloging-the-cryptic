@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
+use App\Models\Concerns\HasUserTracking;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,6 +17,7 @@ class LinkType extends Model
 {
     use HasFactory;
     use HasSlugRouteKey;
+    use HasUserTracking;
 
     /**
      * The table associated with the model.
@@ -32,6 +34,8 @@ class LinkType extends Model
     protected $fillable = [
         'name',
         'slug',
+        'created_by_id',
+        'updated_by_id',
     ];
 
     /**

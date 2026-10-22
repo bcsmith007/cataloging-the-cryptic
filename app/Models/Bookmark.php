@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasUserTracking;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Bookmark extends Model
 {
     use HasFactory;
+    use HasUserTracking;
 
     /**
      * The table associated with the model.
@@ -33,6 +35,8 @@ class Bookmark extends Model
         'puzzle_id',
         'timestamp_seconds',
         'label',
+        'created_by_id',
+        'updated_by_id',
     ];
 
     /**

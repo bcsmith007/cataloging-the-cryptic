@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\User;
 use App\Models\Video;
 use App\Models\YouTubeSyncLog;
 use App\Services\YouTubeService;
@@ -103,6 +104,7 @@ class SyncYouTubeVideos extends Command
         $totalViewsAdded = 0;
         $consecutiveExisting = 0;
         $stopEarlyThreshold = 10;
+        $systemUser = ! $dryRun ? User::getSystemUser() : null;
 
         // -------------------------------------------------------------
         // Step 1: Check for new videos and add them to the catalog
@@ -262,6 +264,10 @@ class SyncYouTubeVideos extends Command
                             $newVideo->access_level = 'public';
                             $newVideo->is_finalized = false;
                             $newVideo->stats_synced_at = now();
+                            if ($systemUser) {
+                                $newVideo->created_by_id = $systemUser->id;
+                                $newVideo->updated_by_id = $systemUser->id;
+                            }
                             $newVideo->save();
                         }
                     }

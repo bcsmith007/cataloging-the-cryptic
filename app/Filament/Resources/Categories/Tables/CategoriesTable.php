@@ -36,6 +36,20 @@ class CategoriesTable
                     ->badge()
                     ->color('info')
                     ->sortable(),
+
+                TextColumn::make('creator.name')
+                    ->label('Created By')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('updater.name')
+                    ->label('Updated By')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('name', 'asc')
             ->recordActions([

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
+use App\Models\Concerns\HasUserTracking;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,7 @@ class PatreonPost extends Model
 {
     use HasFactory;
     use HasSlugRouteKey;
+    use HasUserTracking;
 
     /**
      * The table associated with the model.
@@ -38,6 +40,8 @@ class PatreonPost extends Model
         'patreon_url',
         'published_at',
         'notes',
+        'created_by_id',
+        'updated_by_id',
     ];
 
     /**

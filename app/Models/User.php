@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'is_admin'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -24,7 +24,45 @@ class User extends Authenticatable implements FilamentUser
      */
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
+        return (bool) $this->is_admin;
+    }
+
+    /**
+     * Check if the user has administrative privileges.
+     */
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_admin;
+    }
+
+    /**
+     * Retrieve or create the system user used for automated tasks and scheduled jobs.
+     */
+    public static function getSystemUser(): self
+    {
+        return static::firstOrCreate(
+            ['email' => 'system@catalogingthecryptic.com'],
+            [
+                'name' => 'System',
+                'password' => bcrypt(str()->random(32)),
+                'is_admin' => false,
+            ]
+        );
+    }
+
+    /**
+     * Retrieve the user named "Ben" or create one if none exists.
+     */
+    public static function getBenUser(): self
+    {
+        return static::where('name', 'Ben')->first()
+            ?? static::where('email', 'benjamin.c.smith@gmail.com')->first()
+            ?? static::create([
+                'name' => 'Ben',
+                'email' => 'benjamin.c.smith@gmail.com',
+                'password' => bcrypt(str()->random(32)),
+                'is_admin' => true,
+            ]);
     }
 
     /**
@@ -37,6 +75,7 @@ class User extends Authenticatable implements FilamentUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 }

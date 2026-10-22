@@ -57,6 +57,20 @@ class PatreonPostsTable
                     ->label('Patreon Link')
                     ->limit(40)
                     ->url(fn ($record): string => $record->patreon_url, true),
+
+                TextColumn::make('creator.name')
+                    ->label('Created By')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                TextColumn::make('updater.name')
+                    ->label('Updated By')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('published_at', 'desc')
             ->recordActions([

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
+use App\Models\Concerns\HasUserTracking;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class Puzzle extends Model
 {
     use HasFactory;
     use HasSlugRouteKey;
+    use HasUserTracking;
 
     /**
      * The "booted" method of the model.
@@ -64,6 +66,8 @@ class Puzzle extends Model
         'access_level',
         'rules_raw',
         'difficulty_score',
+        'created_by_id',
+        'updated_by_id',
     ];
 
     /**

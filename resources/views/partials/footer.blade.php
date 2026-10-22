@@ -16,6 +16,7 @@
                 <a href="{{ filament()->getProfileUrl() ?? url('/admin/profile') }}" class="text-slate-400 hover:text-white transition-colors">Profile</a>
             @else
                 <a href="{{ route('filament.admin.auth.login') }}" class="text-slate-400 hover:text-white transition-colors">Login</a>
+                <a href="{{ route('filament.admin.auth.register') }}" class="text-slate-400 hover:text-white transition-colors">Register</a>
             @endauth
         </div>
         <p class="ctc-footer-copy">Cataloging the Cryptic &mdash; An unofficial community directory and archive for Cracking the Cryptic.</p>
