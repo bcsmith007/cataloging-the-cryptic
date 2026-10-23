@@ -105,3 +105,13 @@ Code and Site Style:
 
 * All files for this project are in the `/Users/bcsmith/Sites/ctc` directory
 * No other files should be used, edited, or referenced without explicit permission
+
+---
+
+## 8. Environments, Security Headers, and Front-End Assets
+
+* **Scope Security Headers to Production Only:** In `app/Http/Middleware/SetSecurityHeaders.php`, bypass security headers in non-production environments (`if (! app()->isProduction()) { return $next($request); }`) to avoid breaking local HTTP development (e.g., `ctc.test`).
+* **Permissions-Policy:** Ensure deprecated or non-standard directives such as `browsing-topics=()` are never used.
+* **Standardize Front-End Assets with @vite:** Never hardcode paths to `/build/assets/...` in Blade templates. Always use `@vite(['resources/css/app.css', 'resources/js/app.js'])`. Completely remove any Tailwind Play CDN script tag.
+* **Bundle Dependencies Locally:** All third-party client-side libraries (e.g., Chart.js) must be installed via npm (`package.json`) and imported/initialized inside `resources/js/app.js` rather than loading external CDN scripts that violate the production Content Security Policy.
+

@@ -10,10 +10,26 @@ class SecurityHeadersTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * Test that public responses contain all required security headers.
+     * Test that security headers are bypassed in non-production environments.
+     */
+    public function test_security_headers_are_bypassed_in_non_production_environments(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertHeaderMissing('Strict-Transport-Security');
+        $response->assertHeaderMissing('Referrer-Policy');
+        $response->assertHeaderMissing('Permissions-Policy');
+        $response->assertHeaderMissing('Content-Security-Policy');
+    }
+
+    /**
+     * Test that public responses contain all required security headers in production.
      */
     public function test_public_responses_contain_required_security_headers(): void
     {
+        $this->app->detectEnvironment(fn () => 'production');
+
         $response = $this->get('/');
 
         $response->assertStatus(200);
@@ -36,10 +52,12 @@ class SecurityHeadersTest extends TestCase
     }
 
     /**
-     * Test that Content-Security-Policy accommodates all front-end requirements.
+     * Test that Content-Security-Policy accommodates all front-end requirements in production.
      */
     public function test_content_security_policy_accommodates_frontend_requirements(): void
     {
+        $this->app->detectEnvironment(fn () => 'production');
+
         $response = $this->get('/');
         $csp = $response->headers->get('Content-Security-Policy');
 
@@ -82,10 +100,12 @@ class SecurityHeadersTest extends TestCase
     }
 
     /**
-     * Test that admin responses also receive security headers.
+     * Test that admin responses also receive security headers in production.
      */
     public function test_admin_responses_contain_security_headers(): void
     {
+        $this->app->detectEnvironment(fn () => 'production');
+
         $response = $this->get('/admin/login');
 
         $response->assertStatus(200);

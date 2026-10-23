@@ -15,6 +15,10 @@ class SetSecurityHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if (! app()->isProduction()) {
+            return $next($request);
+        }
+
         /** @var Response $response */
         $response = $next($request);
 

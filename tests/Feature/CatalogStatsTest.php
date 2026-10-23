@@ -60,6 +60,7 @@ class CatalogStatsTest extends TestCase
         $response->assertSee('Standard Solves');
         $response->assertSee('YouTube Shorts');
         $response->assertSee('Live Streams');
+        $response->assertDontSee('https://cdn.jsdelivr.net');
     }
 
     /**

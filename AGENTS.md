@@ -30,9 +30,17 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Stick to existing directory structure; don't create new base folders without approval.
 - Do not change the application's dependencies without approval.
 
-## Frontend Bundling
+## Frontend Bundling & Assets
 
 - If a frontend change doesn't show in the UI or you get a "Unable to locate file in Vite manifest" error, run `npm run build` or ask the user to run `npm run dev` or `composer run dev`.
+- Never hardcode paths to `/build/assets/...` in Blade templates. Always use `@vite(['resources/css/app.css', 'resources/js/app.js'])`.
+- Ensure the Tailwind Play CDN `<script>` tag is never used; rely solely on standard compiled CSS via Vite.
+- All client-side dependencies (such as Chart.js or utilities) must be installed via npm (`package.json`) and imported/initialized in `resources/js/app.js` rather than loading external CDN scripts that violate the production Content Security Policy.
+
+## Security Headers & Environments
+
+- Security headers in `app/Http/Middleware/SetSecurityHeaders.php` must be scoped to production only (`if (! app()->isProduction()) { return $next($request); }`) to avoid breaking local HTTP development (e.g. `ctc.test`).
+- In `Permissions-Policy`, never include deprecated or non-standard directives such as `browsing-topics=()`.
 
 ## Documentation Files
 
