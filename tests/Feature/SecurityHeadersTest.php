@@ -25,7 +25,7 @@ class SecurityHeadersTest extends TestCase
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
         // 3. Permissions-Policy
-        $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), browsing-topics=()');
+        $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
         // 4. Content-Security-Policy
         $this->assertTrue($response->headers->has('Content-Security-Policy'));
@@ -66,8 +66,19 @@ class SecurityHeadersTest extends TestCase
         $this->assertStringContainsString("font-src 'self' data: https://fonts.gstatic.com", $csp);
         $this->assertStringContainsString('https://fonts.googleapis.com', $csp);
 
-        // Tailwind CSS CDN
-        $this->assertStringContainsString('https://cdn.tailwindcss.com', $csp);
+        // Tailwind CSS CDN is no longer permitted
+        $this->assertStringNotContainsString('https://cdn.tailwindcss.com', $csp);
+    }
+
+    /**
+     * Test that the public layout uses Vite and does not load Tailwind Play CDN.
+     */
+    public function test_layout_uses_vite_and_removes_tailwind_play_cdn(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertDontSee('https://cdn.tailwindcss.com');
     }
 
     /**
@@ -80,7 +91,7 @@ class SecurityHeadersTest extends TestCase
         $response->assertStatus(200);
         $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-        $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), browsing-topics=()');
+        $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
         $this->assertTrue($response->headers->has('Content-Security-Policy'));
     }
 }

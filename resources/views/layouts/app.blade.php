@@ -19,34 +19,7 @@
 
     <link rel="stylesheet" href="{{ asset('fonts/fonts.css') }}">
     <link rel="stylesheet" href="{{ asset('css/site.css') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-                        mono: ['"JetBrains Mono"', 'monospace'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#f0fdf4',
-                            100: '#dcfce7',
-                            400: '#4ade80',
-                            500: '#22c55e',
-                            600: '#16a34a',
-                            900: '#14532d',
-                        },
-                        patreon: {
-                            500: '#ff424d',
-                            600: '#e0323c',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-full flex flex-col bg-slate-950 text-slate-200">
     @include('partials.header')
