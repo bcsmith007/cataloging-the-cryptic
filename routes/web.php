@@ -24,8 +24,14 @@ Route::get('/videos/{slug}', [VideoController::class, 'show'])->name('videos.sho
 Route::get('/setters', [SetterController::class, 'index'])->name('setters.index');
 Route::get('/setters/{setter}', [SetterController::class, 'show'])->name('setters.show');
 Route::view('/privacy', 'privacy')->name('privacy');
+Route::get('/bookmark-player', function (Request $request) {
+    $queryString = $request->getQueryString();
+
+    return redirect('/admin/bookmark-player'.($queryString ? '?'.$queryString : ''));
+});
+
 Route::get('/test-video-bookmarks', function (Request $request) {
     $queryString = $request->getQueryString();
 
-    return redirect('/admin/test-video-bookmarks'.($queryString ? '?'.$queryString : ''));
+    return redirect('/admin/bookmark-player'.($queryString ? '?'.$queryString : ''));
 });

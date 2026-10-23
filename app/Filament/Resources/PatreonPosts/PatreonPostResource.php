@@ -27,9 +27,11 @@ class PatreonPostResource extends Resource
 
     protected static ?string $recordRouteKeyName = 'slug';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedLockClosed;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolder;
 
-    protected static ?int $navigationSort = 3;
+    protected static string|\UnitEnum|null $navigationGroup = 'Taxonomy';
+
+    protected static ?int $navigationSort = 4;
 
     public static function form(Schema $schema): Schema
     {

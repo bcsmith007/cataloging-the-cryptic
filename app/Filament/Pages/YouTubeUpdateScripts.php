@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use UnitEnum;
 
 /**
  * Administrative page for reviewing YouTube data synchronization and update scripts.
@@ -31,7 +32,9 @@ class YouTubeUpdateScripts extends Page
 
     protected static ?string $slug = 'youtube-update-scripts';
 
-    protected static ?int $navigationSort = 15;
+    protected static string|UnitEnum|null $navigationGroup = 'Tools';
+
+    protected static ?int $navigationSort = 3;
 
     protected string $view = 'filament.pages.youtube-update-scripts';
 

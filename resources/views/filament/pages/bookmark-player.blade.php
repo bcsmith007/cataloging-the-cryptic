@@ -45,7 +45,7 @@
 
                 <div class="md:col-span-4 space-y-1">
                     <label class="block text-xs font-medium text-slate-300">
-                        Or Test Any YouTube URL / ID
+                        Or Load Any YouTube URL / ID
                     </label>
                     <input
                         type="text"
@@ -87,7 +87,7 @@
 
             {{-- 16:9 YouTube Player Frame (Protected from Livewire morphing via wire:ignore) --}}
             <div id="yt-player-frame-wrapper" wire:ignore class="relative w-full aspect-video bg-black flex items-center justify-center">
-                <div id="yt-test-player-container" class="w-full h-full"></div>
+                <div id="yt-bookmark-player-container" class="w-full h-full"></div>
             </div>
 
             {{-- Real-Time Interactive Player Controls Bar --}}
@@ -209,11 +209,11 @@
 
         {{-- Explanatory guide card --}}
         <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-xs text-slate-400 space-y-2">
-            <div class="font-semibold text-slate-300">How real-time timestamp capture works on this test page:</div>
+            <div class="font-semibold text-slate-300">How real-time timestamp capture works:</div>
             <ul class="list-disc list-inside space-y-1">
                 <li><strong class="text-slate-200">Clicking the (+) button</strong> adds a new bookmark at the current playback timestamp at the top of the list.</li>
                 <li><strong class="text-slate-200">Clicking the play button next to any timestamp</strong> seeks the video directly to that bookmark.</li>
-                <li><strong class="text-slate-200">Save Bookmarks button</strong> saves your changes directly to the selected database video so you can verify data persistence.</li>
+                <li><strong class="text-slate-200">Save Bookmarks button</strong> saves your changes directly to the selected video in the database.</li>
             </ul>
         </div>
     </div>
@@ -278,17 +278,16 @@
                         this.isPlaying = false;
 
                         // If player exists, is in DOM, and has loadVideoById, use it
-                        const iframe = document.getElementById('yt-test-player-container');
+                        const iframe = document.getElementById('yt-bookmark-player-container');
                         if (iframe && this.player && typeof this.player.loadVideoById === 'function') {
                             try {
                                 this.player.loadVideoById({
                                     videoId: this.videoId,
                                     startSeconds: 0
                                 });
-                                console.log('[TestPlayer] Smoothly loaded video ID via loadVideoById:', this.videoId);
                                 return;
                             } catch (err) {
-                                console.warn('[TestPlayer] loadVideoById error, remounting:', err);
+                                console.warn('[BookmarkPlayer] loadVideoById error, remounting:', err);
                             }
                         }
 
@@ -364,13 +363,13 @@
                         }
 
                         // Ensure a fresh target div element exists inside the wire:ignore wrapper
-                        wrapper.innerHTML = '<div id="yt-test-player-container" class="w-full h-full"></div>';
+                        wrapper.innerHTML = '<div id="yt-bookmark-player-container" class="w-full h-full"></div>';
 
                         if (!window.YT || !window.YT.Player) {
                             return;
                         }
 
-                        this.player = new YT.Player('yt-test-player-container', {
+                        this.player = new YT.Player('yt-bookmark-player-container', {
                             videoId: self.videoId,
                             playerVars: {
                                 enablejsapi: 1,
@@ -380,7 +379,7 @@
                             },
                             events: {
                                 onReady: (e) => {
-                                    window.ytTestPlayer = self.player;
+                                    window.ytBookmarkPlayer = self.player;
                                     self.duration = self.player.getDuration() || 0;
                                     self.startTimer();
                                 },

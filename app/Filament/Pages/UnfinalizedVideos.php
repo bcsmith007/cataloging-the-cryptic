@@ -37,7 +37,9 @@ class UnfinalizedVideos extends Page implements HasTable
 
     protected static ?string $slug = 'unfinalized-videos';
 
-    protected static ?int $navigationSort = 2;
+    protected static string|\UnitEnum|null $navigationGroup = 'Tools';
+
+    protected static ?int $navigationSort = 1;
 
     protected string $view = 'filament.pages.unfinalized-videos';
 

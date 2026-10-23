@@ -22,8 +22,10 @@ use App\Models\Puzzle;
 use App\Models\Setter;
 use App\Models\User;
 use App\Models\Video;
+use Filament\Facades\Filament;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -64,6 +66,69 @@ class AdminPanelTest extends TestCase
 
         $createResponse = $this->actingAs($user)->get('/admin/videos/create');
         $createResponse->assertStatus(200);
+    }
+
+    /**
+     * Test that the admin sidebar navigation removes the Dashboard link, organizes Tools, Admin, and Taxonomy sections.
+     */
+    public function test_admin_sidebar_navigation_removes_dashboard_and_places_youtube_scripts_in_tools(): void
+    {
+        $user = User::factory()->admin()->create();
+
+        $panel = Filament::getPanel('admin');
+        Filament::setCurrentPanel($panel);
+        $navigation = $panel->getNavigation();
+
+        // 1. Verify no group contains a Dashboard navigation item
+        $allItemLabels = [];
+        foreach ($navigation as $group) {
+            foreach ($group->getItems() as $item) {
+                $allItemLabels[] = $item->getLabel();
+            }
+        }
+
+        $this->assertNotContains('Dashboard', $allItemLabels);
+
+        // 2. Verify "Tools" group exists and contains Unfinalized Videos, Bookmark Player, and YouTube Scripts
+        $toolsGroup = collect($navigation)->first(fn ($g) => $g->getLabel() === 'Tools');
+        $this->assertNotNull($toolsGroup, 'The "Tools" navigation group was not found.');
+
+        $toolsItemLabels = collect($toolsGroup->getItems())->map(fn ($item) => $item->getLabel())->all();
+        $this->assertContains('Unfinalized Videos', $toolsItemLabels);
+        $this->assertContains('Bookmark Player', $toolsItemLabels);
+        $this->assertContains('YouTube Scripts', $toolsItemLabels);
+
+        // 3. Verify "Admin" group exists and contains Users
+        $adminGroup = collect($navigation)->first(fn ($g) => $g->getLabel() === 'Admin');
+        $this->assertNotNull($adminGroup, 'The "Admin" navigation group was not found.');
+
+        $adminItemLabels = collect($adminGroup->getItems())->map(fn ($item) => $item->getLabel())->all();
+        $this->assertContains('Users', $adminItemLabels);
+
+        // 4. Verify "Taxonomy" group exists and contains Videos, Puzzles, Setters, Patreon Posts, Categories, Constraints, Hosts, Link Types
+        $taxonomyGroup = collect($navigation)->first(fn ($g) => $g->getLabel() === 'Taxonomy');
+        $this->assertNotNull($taxonomyGroup, 'The "Taxonomy" navigation group was not found.');
+
+        $taxonomyItems = collect($taxonomyGroup->getItems());
+        $taxonomyItemLabels = $taxonomyItems->map(fn ($item) => $item->getLabel())->all();
+        $this->assertContains('Videos', $taxonomyItemLabels);
+        $this->assertContains('Puzzles', $taxonomyItemLabels);
+        $this->assertContains('Setters', $taxonomyItemLabels);
+        $this->assertContains('Patreon Posts', $taxonomyItemLabels);
+        $this->assertContains('Categories', $taxonomyItemLabels);
+        $this->assertContains('Constraints', $taxonomyItemLabels);
+        $this->assertContains('Hosts', $taxonomyItemLabels);
+        $this->assertContains('Link Types', $taxonomyItemLabels);
+
+        // Verify all taxonomy items have folder icons
+        foreach ($taxonomyItems as $item) {
+            $icon = $item->getIcon();
+            $iconName = is_object($icon) && isset($icon->value) ? $icon->value : (string) $icon;
+            $this->assertTrue(
+                $icon === Heroicon::OutlinedFolder || str_contains($iconName, 'folder'),
+                "Taxonomy item {$item->getLabel()} does not have a folder icon (got: {$iconName})"
+            );
+        }
     }
 
     /**

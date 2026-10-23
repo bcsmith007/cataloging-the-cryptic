@@ -20,7 +20,11 @@ class ConstraintResource extends Resource
 
     protected static ?string $recordRouteKeyName = 'slug';
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFolder;
+
+    protected static string|\UnitEnum|null $navigationGroup = 'Taxonomy';
+
+    protected static ?int $navigationSort = 6;
 
     public static function form(Schema $schema): Schema
     {

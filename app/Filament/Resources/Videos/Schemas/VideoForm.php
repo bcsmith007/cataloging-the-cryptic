@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Videos\Schemas;
 
-use App\Filament\Pages\TestVideoBookmarks;
+use App\Filament\Pages\BookmarkPlayer;
 use App\Filament\Resources\Hosts\Schemas\HostForm;
 use App\Filament\Resources\PatreonPosts\RelationManagers\VideosRelationManager;
 use App\Filament\Resources\PatreonPosts\Schemas\PatreonPostForm;
@@ -302,22 +302,22 @@ class VideoForm
                     ->description(function ($record, Section $component): Htmlable {
                         $video = static::resolveVideoModel($record, $component);
                         if ($video) {
-                            $url = TestVideoBookmarks::getUrl(['video' => $video->id]);
+                            $url = BookmarkPlayer::getUrl(['video' => $video->id]);
 
-                            return new HtmlString('Annotate key video moments with timecodes, labels, and puzzle associations. Or <a href="'.e($url).'" target="_blank" rel="noopener noreferrer" class="font-medium text-amber-500 underline hover:text-amber-400">open this video in the Video Bookmark Player test page</a>.');
+                            return new HtmlString('Annotate key video moments with timecodes, labels, and puzzle associations. Or <a href="'.e($url).'" target="_blank" rel="noopener noreferrer" class="font-medium text-amber-500 underline hover:text-amber-400">open this video in the Bookmark Player</a>.');
                         }
 
                         return new HtmlString('Annotate key video moments with timecodes, labels, and puzzle associations.');
                     })
                     ->headerActions([
-                        Action::make('openTestPlayer')
-                            ->label('Test in Bookmark Player')
-                            ->icon('heroicon-m-arrow-top-right-on-square')
-                            ->color('warning')
+                        Action::make('openBookmarkPlayer')
+                            ->label('Open in Bookmark Player')
+                            ->icon('heroicon-m-play-circle')
+                            ->color('primary')
                             ->url(function ($record, Action $action): ?string {
                                 $video = static::resolveVideoModel($record, $action);
 
-                                return $video ? TestVideoBookmarks::getUrl(['video' => $video->id]) : null;
+                                return $video ? BookmarkPlayer::getUrl(['video' => $video->id]) : null;
                             })
                             ->openUrlInNewTab()
                             ->visible(function ($record, Action $action): bool {

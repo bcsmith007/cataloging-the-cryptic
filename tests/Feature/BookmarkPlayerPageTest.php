@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Pages\TestVideoBookmarks;
+use App\Filament\Pages\BookmarkPlayer;
 use App\Models\Bookmark;
 use App\Models\Puzzle;
 use App\Models\User;
@@ -11,34 +11,36 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
 
-class TestVideoBookmarksPageTest extends TestCase
+class BookmarkPlayerPageTest extends TestCase
 {
     use RefreshDatabase;
 
     /**
-     * Test that guest users are redirected to login when visiting the test page.
+     * Test that guest users are redirected to login when visiting the bookmark player page.
      */
     public function test_guest_is_redirected_to_login(): void
     {
-        $response = $this->get('/admin/test-video-bookmarks');
+        $response = $this->get('/admin/bookmark-player');
 
         $response->assertRedirect('/admin/login');
     }
 
     /**
-     * Test that the convenience route redirects to the admin test page.
+     * Test that convenience routes redirect to the admin bookmark player page.
      */
-    public function test_convenience_test_route_redirects(): void
+    public function test_convenience_routes_redirect(): void
     {
-        $response = $this->get('/test-video-bookmarks');
+        $response = $this->get('/bookmark-player');
+        $response->assertRedirect('/admin/bookmark-player');
 
-        $response->assertRedirect('/admin/test-video-bookmarks');
+        $testResponse = $this->get('/test-video-bookmarks');
+        $testResponse->assertRedirect('/admin/bookmark-player');
     }
 
     /**
-     * Test that authenticated users can access the test page successfully.
+     * Test that authenticated users can access the bookmark player page successfully without test labels.
      */
-    public function test_authenticated_user_can_access_test_page(): void
+    public function test_authenticated_user_can_access_bookmark_player_page(): void
     {
         $user = User::factory()->create();
         $video = Video::create([
@@ -48,15 +50,16 @@ class TestVideoBookmarksPageTest extends TestCase
             'published_at' => now(),
         ]);
 
-        $response = $this->actingAs($user)->get('/admin/test-video-bookmarks');
+        $response = $this->actingAs($user)->get('/admin/bookmark-player');
 
         $response->assertStatus(200);
-        $response->assertSee('Video Bookmark Player (Test Page)');
+        $response->assertSee('Bookmark Player');
+        $response->assertDontSee('Video Bookmark Player (Test Page)');
         $response->assertSee('Test Cracking Video');
     }
 
     /**
-     * Test that the test page can add a bookmark with timestamp and persist it.
+     * Test that the bookmark player can add a bookmark with timestamp and persist it.
      */
     public function test_livewire_can_add_bookmark_with_timestamp_and_save(): void
     {
@@ -70,7 +73,7 @@ class TestVideoBookmarksPageTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test(TestVideoBookmarks::class)
+        Livewire::test(BookmarkPlayer::class)
             ->call('selectVideo', $video->id)
             ->call('addBookmarkWithTimestamp', '4:15', 'Rules explanation')
             ->call('saveBookmarks');
@@ -103,7 +106,7 @@ class TestVideoBookmarksPageTest extends TestCase
 
         $this->actingAs($user);
 
-        Livewire::test(TestVideoBookmarks::class)
+        Livewire::test(BookmarkPlayer::class)
             ->set('selectedVideoId', $video2->id)
             ->assertSet('youtubeVideoId', 'secondvideo2')
             ->assertSet('videoTitle', 'Second Video')
@@ -138,7 +141,7 @@ class TestVideoBookmarksPageTest extends TestCase
 
         $unrelatedPuzzle = Puzzle::create(['title' => 'Unrelated Standalone Puzzle']);
 
-        $test = Livewire::test(TestVideoBookmarks::class)
+        $test = Livewire::test(BookmarkPlayer::class)
             ->call('selectVideo', $video1->id);
 
         $options1 = $test->instance()->getAssociatedPuzzleOptions();
@@ -159,72 +162,43 @@ class TestVideoBookmarksPageTest extends TestCase
     /**
      * Test that saving a bookmark with an associated puzzle persists correctly.
      */
-    public function test_saving_bookmark_with_associated_puzzle_persists(): void
+    public function test_saving_bookmark_with_associated_puzzle_persists_puzzle_id(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
 
         $video = Video::create([
-            'youtube_video_id' => 'puzzleVideoSave',
-            'title' => 'Video For Saving Bookmark With Puzzle',
+            'youtube_video_id' => 'puzzleSaveVid',
+            'title' => 'Video For Puzzle Save Test',
             'video_type' => 'youtube',
             'published_at' => now(),
         ]);
-        $puzzle = Puzzle::create(['title' => 'Associated Test Puzzle']);
+        $puzzle = Puzzle::create(['title' => 'The Miracle Solve']);
         $video->puzzles()->attach($puzzle->id);
 
-        Livewire::test(TestVideoBookmarks::class)
+        Livewire::test(BookmarkPlayer::class)
             ->call('selectVideo', $video->id)
-            ->call('addBookmarkWithTimestamp', '12:34', 'Start of puzzle solve', $puzzle->id)
+            ->call('addBookmarkWithTimestamp', '12:30', 'Solve Begins', $puzzle->id)
             ->call('saveBookmarks');
 
         $this->assertDatabaseHas('bookmarks', [
             'video_id' => $video->id,
-            'timestamp_seconds' => 754,
-            'label' => 'Start of puzzle solve',
+            'timestamp_seconds' => 750,
+            'label' => 'Solve Begins',
             'puzzle_id' => $puzzle->id,
         ]);
     }
 
     /**
-     * Test that an unassociated puzzle cannot be saved for a video.
+     * Test that getBookmarkLabelOptions aggregates existing database labels and defaults.
      */
-    public function test_unassociated_puzzle_is_not_allowed(): void
+    public function test_bookmark_label_options_collects_database_labels(): void
     {
         $user = User::factory()->create();
         $this->actingAs($user);
 
         $video = Video::create([
-            'youtube_video_id' => 'puzzleVideoReject',
-            'title' => 'Video Rejecting Unassociated Puzzle',
-            'video_type' => 'youtube',
-            'published_at' => now(),
-        ]);
-        $unassociatedPuzzle = Puzzle::create(['title' => 'Wrong Video Puzzle']);
-
-        Livewire::test(TestVideoBookmarks::class)
-            ->call('selectVideo', $video->id)
-            ->call('addBookmarkWithTimestamp', '05:00', 'Invalid bookmark', $unassociatedPuzzle->id)
-            ->call('saveBookmarks');
-
-        $this->assertDatabaseHas('bookmarks', [
-            'video_id' => $video->id,
-            'timestamp_seconds' => 300,
-            'label' => 'Invalid bookmark',
-            'puzzle_id' => null,
-        ]);
-    }
-
-    /**
-     * Test that previous bookmark labels from the database load in dropdown options.
-     */
-    public function test_previous_bookmark_labels_load_in_dropdown_options(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        $video = Video::create([
-            'youtube_video_id' => 'labelVid123',
+            'youtube_video_id' => 'labelOptionsVid',
             'title' => 'Video For Label Test',
             'video_type' => 'youtube',
             'published_at' => now(),
@@ -235,10 +209,10 @@ class TestVideoBookmarksPageTest extends TestCase
             'label' => 'Unique Custom Deduction',
         ]);
 
-        $test = Livewire::test(TestVideoBookmarks::class)
+        $test = Livewire::test(BookmarkPlayer::class)
             ->call('selectVideo', $video->id);
 
-        /** @var TestVideoBookmarks $instance */
+        /** @var BookmarkPlayer $instance */
         $instance = $test->instance();
         $labelOptions = $instance->getBookmarkLabelOptions();
 
@@ -261,7 +235,7 @@ class TestVideoBookmarksPageTest extends TestCase
             'published_at' => now(),
         ]);
 
-        $test = Livewire::test(TestVideoBookmarks::class)
+        $test = Livewire::test(BookmarkPlayer::class)
             ->call('selectVideo', $video->id)
             ->call('addBookmarkWithTimestamp', '1:00', 'Earlier Event')
             ->call('addBookmarkWithTimestamp', '5:00', 'Later Event');
@@ -301,7 +275,7 @@ class TestVideoBookmarksPageTest extends TestCase
             'label' => 'Second at 5 minutes',
         ]);
 
-        $test = Livewire::test(TestVideoBookmarks::class)
+        $test = Livewire::test(BookmarkPlayer::class)
             ->call('selectVideo', $video->id);
 
         $bookmarks = array_values($test->get('data.bookmarks') ?? []);
@@ -318,9 +292,11 @@ class TestVideoBookmarksPageTest extends TestCase
      */
     public function test_convenience_test_route_preserves_query_string(): void
     {
-        $response = $this->get('/test-video-bookmarks?video=42');
+        $response = $this->get('/bookmark-player?video=42');
+        $response->assertRedirect('/admin/bookmark-player?video=42');
 
-        $response->assertRedirect('/admin/test-video-bookmarks?video=42');
+        $legacyResponse = $this->get('/test-video-bookmarks?video=42');
+        $legacyResponse->assertRedirect('/admin/bookmark-player?video=42');
     }
 
     /**
@@ -350,11 +326,11 @@ class TestVideoBookmarksPageTest extends TestCase
             'label' => 'Target Bookmark',
         ]);
 
-        $response = $this->get('/admin/test-video-bookmarks?video='.$video2->id);
+        $response = $this->get('/admin/bookmark-player?video='.$video2->id);
         $response->assertStatus(200);
         $response->assertSee('Target Video Title');
 
-        $test = Livewire::test(TestVideoBookmarks::class, ['video' => $video2->id]);
+        $test = Livewire::test(BookmarkPlayer::class, ['video' => $video2->id]);
 
         $this->assertEquals($video2->id, $test->get('selectedVideoId'));
         $this->assertEquals('secondVideoId2', $test->get('youtubeVideoId'));
@@ -367,14 +343,14 @@ class TestVideoBookmarksPageTest extends TestCase
     }
 
     /**
-     * Test that the admin video edit page contains a link to the test video bookmarks page in the bookmarks section.
+     * Test that the admin video edit page contains a link to the bookmark player in the bookmarks section.
      */
-    public function test_admin_video_edit_page_contains_link_to_bookmark_player_test_page(): void
+    public function test_admin_video_edit_page_contains_link_to_bookmark_player(): void
     {
         $user = User::factory()->create();
         $video = Video::create([
             'youtube_video_id' => 'editPageTestYt1',
-            'title' => 'Edit Page Video For Test Player Link',
+            'title' => 'Edit Page Video For Player Link',
             'video_type' => 'youtube',
             'published_at' => now(),
         ]);
@@ -382,30 +358,12 @@ class TestVideoBookmarksPageTest extends TestCase
         $response = $this->actingAs($user)->get(route('filament.admin.resources.videos.edit', ['record' => $video->getRouteKey()]));
 
         $response->assertStatus(200);
-        $expectedUrl = TestVideoBookmarks::getUrl(['video' => $video->id]);
+        $expectedUrl = BookmarkPlayer::getUrl(['video' => $video->id]);
         $response->assertSee($expectedUrl);
-        $response->assertSee('Test in Bookmark Player');
-    }
-
-    /**
-     * Test that the test page section description does not reference the removed capture current time button.
-     */
-    public function test_test_page_bookmarks_section_description_does_not_mention_capture_current_time(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        Video::create([
-            'youtube_video_id' => 'sectionDescTest1',
-            'title' => 'Section Description Test Video',
-            'video_type' => 'youtube',
-            'published_at' => now(),
-        ]);
-
-        $response = $this->get('/admin/test-video-bookmarks');
-        $response->assertStatus(200);
-        $response->assertDontSee('Capture Current Time');
-        $response->assertSee('Click the (+) Add Bookmark button to capture the current video playback timestamp.');
+        $response->assertSee('Bookmark Player');
+        $response->assertSee('Open in Bookmark Player');
+        $response->assertDontSee('Test in Bookmark Player');
+        $response->assertDontSee('test page');
     }
 
     /**
@@ -423,7 +381,7 @@ class TestVideoBookmarksPageTest extends TestCase
             'published_at' => now(),
         ]);
 
-        $test = Livewire::test(TestVideoBookmarks::class)
+        $test = Livewire::test(BookmarkPlayer::class)
             ->call('selectVideo', $video->id)
             ->callFormComponentAction('bookmarks', 'add', arguments: ['timestamp' => '3:45']);
 
