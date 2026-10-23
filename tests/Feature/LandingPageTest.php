@@ -355,4 +355,36 @@ class LandingPageTest extends TestCase
         $response->assertDontSee('.ctc-public-header {', false);
         $response->assertDontSee('.ctc-public-footer {', false);
     }
+
+    /**
+     * Test that the header renders both desktop navigation and the mobile hamburger menu with all links.
+     */
+    public function test_header_renders_desktop_navigation_and_mobile_hamburger_menu(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+
+        // Desktop nav container
+        $response->assertSee('ctc-desktop-nav');
+
+        // Mobile hamburger toggle button & accessible attributes
+        $response->assertSee('id="ctc-mobile-menu-btn"', false);
+        $response->assertSee('aria-label="Toggle navigation menu"', false);
+        $response->assertSee('aria-controls="ctc-mobile-menu"', false);
+        $response->assertSee('id="ctc-icon-hamburger"', false);
+        $response->assertSee('id="ctc-icon-close"', false);
+
+        // Mobile menu container & links
+        $response->assertSee('id="ctc-mobile-menu"', false);
+        $response->assertSee('ctc-mobile-nav-link');
+        $response->assertSee(route('videos.index'));
+        $response->assertSee(route('videos.top'));
+        $response->assertSee(route('videos.longest'));
+        $response->assertSee(route('videos.shortest'));
+        $response->assertSee(route('setters.index'));
+        $response->assertSee(route('stats'));
+        $response->assertSee(route('videos.random'));
+        $response->assertSee(route('search'));
+    }
 }

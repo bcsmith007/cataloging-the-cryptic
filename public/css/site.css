@@ -99,12 +99,18 @@ body {
     color: #34d399;
 }
 
-.ctc-public-header nav {
-    display: flex;
+.ctc-public-header .ctc-desktop-nav {
+    display: none;
     align-items: center;
     gap: 1.5rem;
     font-size: 0.875rem;
     font-weight: 500;
+}
+
+@media (min-width: 1024px) {
+    .ctc-public-header .ctc-desktop-nav {
+        display: flex;
+    }
 }
 
 .ctc-public-header nav a.ctc-nav-link {
@@ -131,8 +137,94 @@ body {
     color: #ffffff;
 }
 
-/* Strict sizing for the beaker icon */
-.ctc-public-header svg,
+/* Mobile Toggle Button */
+.ctc-public-header .ctc-mobile-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ctc-public-header .ctc-mobile-toggle-btn:hover {
+    background-color: rgba(51, 65, 85, 0.9);
+    color: #ffffff;
+    border-color: rgba(52, 211, 153, 0.4);
+}
+
+.ctc-public-header .ctc-mobile-toggle-btn:focus-visible {
+    outline: 2px solid #34d399;
+    outline-offset: 2px;
+}
+
+@media (min-width: 1024px) {
+    .ctc-public-header .ctc-mobile-toggle-btn {
+        display: none !important;
+    }
+}
+
+/* Mobile Dropdown Panel */
+.ctc-mobile-menu {
+    display: none;
+    border-top: 1px solid #1e293b;
+    background-color: rgba(2, 6, 23, 0.98);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+}
+
+.ctc-mobile-menu.is-open {
+    display: block;
+}
+
+@media (min-width: 1024px) {
+    .ctc-mobile-menu,
+    .ctc-mobile-menu.is-open {
+        display: none !important;
+    }
+}
+
+.ctc-mobile-menu nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.ctc-mobile-menu a.ctc-mobile-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.5rem;
+    color: #cbd5e1;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    min-height: 2.75rem;
+}
+
+.ctc-mobile-menu a.ctc-mobile-nav-link:hover,
+.ctc-mobile-menu a.ctc-mobile-nav-link:focus-visible {
+    background-color: rgba(30, 41, 59, 0.8);
+    color: #ffffff;
+}
+
+.ctc-mobile-menu a.ctc-mobile-nav-link.active {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    font-weight: 600;
+    border-left: 3px solid #34d399;
+}
+
+/* Sizing for the beaker and small nav icons */
+.ctc-public-header .ctc-nav-link svg,
+.ctc-public-header .ctc-mobile-nav-link svg,
 .ctc-public-header .ctc-beaker-icon {
     width: 14px !important;
     height: 14px !important;
@@ -144,6 +236,18 @@ body {
     display: inline-block !important;
     vertical-align: middle !important;
     flex-shrink: 0 !important;
+}
+
+/* Sizing for the hamburger/close toggle icon */
+.ctc-public-header .ctc-mobile-toggle-btn svg {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    min-height: 22px !important;
+    max-width: 22px !important;
+    max-height: 22px !important;
+    color: currentColor !important;
+    display: block !important;
 }
 
 /* Public Footer */
