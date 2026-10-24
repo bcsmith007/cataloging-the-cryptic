@@ -84,6 +84,9 @@ class SecurityHeadersTest extends TestCase
         $this->assertStringContainsString("font-src 'self' data: https://fonts.gstatic.com", $csp);
         $this->assertStringContainsString('https://fonts.googleapis.com', $csp);
 
+        // jsDelivr CDN fallback
+        $this->assertStringContainsString('https://cdn.jsdelivr.net', $csp);
+
         // Tailwind CSS CDN is no longer permitted
         $this->assertStringNotContainsString('https://cdn.tailwindcss.com', $csp);
     }
