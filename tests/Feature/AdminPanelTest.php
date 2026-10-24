@@ -121,6 +121,7 @@ class AdminPanelTest extends TestCase
         $this->assertContains('Constraints', $taxonomyItemLabels);
         $this->assertContains('Hosts', $taxonomyItemLabels);
         $this->assertContains('Link Types', $taxonomyItemLabels);
+        $this->assertContains('Apps', $taxonomyItemLabels);
 
         // Verify all taxonomy items have folder icons
         foreach ($taxonomyItems as $item) {

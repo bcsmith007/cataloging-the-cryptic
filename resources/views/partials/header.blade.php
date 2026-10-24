@@ -18,6 +18,7 @@
             <a href="{{ route('videos.longest') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('videos.longest') ? 'text-emerald-400 font-semibold' : '' }}">Longest</a>
             <a href="{{ route('videos.shortest') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('videos.shortest') ? 'text-emerald-400 font-semibold' : '' }}">Shortest</a>
             <a href="{{ route('setters.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('setters*') ? 'text-emerald-400 font-semibold' : '' }}">Setters</a>
+            <a href="{{ route('apps.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('apps*') ? 'text-emerald-400 font-semibold' : '' }}">Apps</a>
             <a href="{{ route('stats') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('stats*') ? 'text-emerald-400 font-semibold' : '' }}">Stats</a>
             <a href="{{ route('videos.random') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors flex items-center gap-1.5" title="Take me to a random video">
                 <svg width="14" height="14" class="ctc-beaker-icon w-3.5 h-3.5 text-emerald-400" style="width: 14px; height: 14px; min-width: 14px; min-height: 14px; max-width: 14px; max-height: 14px; display: inline-block; vertical-align: middle;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -72,6 +73,9 @@
             </a>
             <a href="{{ route('setters.index') }}" class="ctc-mobile-nav-link {{ request()->routeIs('setters*') ? 'active' : '' }}">
                 <span>Setters</span>
+            </a>
+            <a href="{{ route('apps.index') }}" class="ctc-mobile-nav-link {{ request()->routeIs('apps*') ? 'active' : '' }}">
+                <span>Apps</span>
             </a>
             <a href="{{ route('stats') }}" class="ctc-mobile-nav-link {{ request()->routeIs('stats*') ? 'active' : '' }}">
                 <span>Stats</span>

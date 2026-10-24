@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SetterController;
@@ -10,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/apps', [AppController::class, 'index'])->name('apps.index');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/videos', [VideoController::class, 'index'])->name('videos.index');
 Route::get('/videos/top', [VideoController::class, 'top'])->name('videos.top');
