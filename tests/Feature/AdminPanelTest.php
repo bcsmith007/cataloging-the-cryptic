@@ -22,11 +22,13 @@ use App\Models\Puzzle;
 use App\Models\Setter;
 use App\Models\User;
 use App\Models\Video;
+use App\Models\YouTubeSyncLog;
 use Filament\Facades\Filament;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -223,7 +225,7 @@ class AdminPanelTest extends TestCase
         $response->assertSee('YouTube Update & Sync Scripts');
         $response->assertSee('ctc:sync-youtube');
         $response->assertSee('ctc:update-views');
-        $response->assertSee('ctc:import-sheet');
+        $response->assertDontSee('ctc:import-sheet');
         $response->assertSee('Every 30 Minutes');
         $response->assertSee('Last Script Execution');
         $response->assertSee('Last 10 Videos Added to Catalog');
@@ -1804,5 +1806,50 @@ class AdminPanelTest extends TestCase
         $this->assertSame(1, $video->puzzles()->count());
         $this->assertSame($bluePrince->id, $video->puzzles->first()->id);
         $this->assertSame('Blue Prince', $video->puzzles->first()->title);
+    }
+
+    /**
+     * Test that the YouTube update scripts page displays timestamps in the user's timezone while database stays UTC.
+     */
+    public function test_youtube_update_scripts_page_shifts_displayed_times_to_user_timezone(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Put last run in cache as UTC: 2026-10-15 18:00:00 UTC
+        Cache::put('youtube_sync_last_run_at', '2026-10-15T18:00:00Z');
+
+        // Create a video with UTC timestamps
+        $video = Video::factory()->create([
+            'title' => 'Timezone Test Video',
+            'created_at' => Carbon::parse('2026-10-15 18:00:00', 'UTC'),
+            'published_at' => Carbon::parse('2026-10-15 18:00:00', 'UTC'),
+        ]);
+
+        // Create a sync log with UTC started_at
+        $log = YouTubeSyncLog::create([
+            'status' => 'success',
+            'started_at' => Carbon::parse('2026-10-15 18:00:00', 'UTC'),
+            'new_videos_count' => 1,
+            'updated_views_count' => 0,
+            'total_views_added' => 0,
+            'total_processed' => 1,
+            'message' => 'Test sync in UTC',
+        ]);
+
+        // 1. Request with America/Los_Angeles timezone cookie (PDT is UTC-7, so 18:00 UTC -> 11:00 PDT)
+        $response = $this->withUnencryptedCookie('ctc_user_timezone', 'America/Los_Angeles')
+            ->get('/admin/youtube-update-scripts');
+
+        $response->assertStatus(200);
+        // Verify displayed times are shifted to Pacific time
+        $response->assertSee('Oct 15, 11:00 PDT');
+        $response->assertSee('America/Los Angeles');
+        $response->assertSee('user-tz-timestamp', false);
+        $response->assertSee('data-iso="2026-10-15T18:00:00', false);
+
+        // 2. Verify database records remain stored in UTC
+        $this->assertSame('2026-10-15 18:00:00', $video->fresh()->created_at->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-10-15 18:00:00', $log->fresh()->started_at->format('Y-m-d H:i:s'));
     }
 }

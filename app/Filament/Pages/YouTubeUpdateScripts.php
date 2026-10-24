@@ -127,6 +127,45 @@ class YouTubeUpdateScripts extends Page
     }
 
     /**
+     * Return the current time zone to use for displaying timestamps.
+     */
+    public function getUserTimezone(): string
+    {
+        $cookieTz = request()->cookie('ctc_user_timezone');
+        if ($cookieTz && in_array($cookieTz, timezone_identifiers_list(), true)) {
+            return $cookieTz;
+        }
+
+        if (auth()->check() && ! empty(auth()->user()->timezone) && in_array(auth()->user()->timezone, timezone_identifiers_list(), true)) {
+            return auth()->user()->timezone;
+        }
+
+        return config('app.user_timezone', 'UTC');
+    }
+
+    /**
+     * Format a given timestamp in the user's current timezone.
+     */
+    public function formatInUserTimezone(?Carbon $dateTime, string $format = 'M j, Y H:i', bool $includeTzName = true): string
+    {
+        if (! $dateTime) {
+            return 'N/A';
+        }
+
+        $tz = $this->getUserTimezone();
+        $converted = $dateTime->copy()->setTimezone($tz);
+        $formatted = $converted->format($format);
+
+        if ($includeTzName) {
+            $tzName = $converted->format('T');
+
+            return "{$formatted} {$tzName}";
+        }
+
+        return $formatted;
+    }
+
+    /**
      * Return the last 10 videos added to the catalog.
      *
      * @return Collection<int, Video>
@@ -225,29 +264,6 @@ class YouTubeUpdateScripts extends Page
                     ['flag' => '--at=TIME', 'description' => 'Simulate run time (midnight, noon, or custom datetime).'],
                 ],
                 'example_cli' => 'php artisan ctc:sync-youtube --at=midnight',
-            ],
-            [
-                'id' => 'import-sheet',
-                'title' => 'Historical Community Catalogue Import',
-                'command' => 'php artisan ctc:import-sheet',
-                'full_signature' => 'ctc:import-sheet {file : Path to catalogue CSV file}',
-                'status' => 'planned',
-                'status_label' => 'Planned (Section 5.1)',
-                'status_color' => 'info',
-                'frequency' => 'Manual / On-Demand',
-                'schedule_expression' => 'Manual (Historical Migration)',
-                'schedule_details' => 'Executed manually for historical data onboarding or bulk community catalogue reconciliation from Google Sheets exports.',
-                'quota_cost' => '0 YouTube API units (processes local CSV export files).',
-                'summary' => 'Parses the community Google Sheet CSV export to backfill historical videos, puzzle links, rules, setters, and categories.',
-                'key_behaviors' => [
-                    'Seeds past videos, setters, rules, and canonical puzzle links from community CSV.',
-                    'Preserves existing relationships and avoids overwriting manual modifications in the database.',
-                    'Generates URL canonicalization jobs for puzzle shortlinks (SudokuPad, Penpa, etc.).',
-                ],
-                'options' => [
-                    ['flag' => '{file}', 'description' => 'Path to the community catalogue CSV export file.'],
-                ],
-                'example_cli' => 'php artisan ctc:import-sheet storage/app/catalogue.csv',
             ],
         ];
     }

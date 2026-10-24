@@ -407,7 +407,9 @@
                 @endphp
                 @if ($lastRun)
                     <div class="ctc-metric-value" style="font-size: 1.25rem; color: #38bdf8;">
-                        {{ $lastRun->setTimezone('UTC')->format('M j, H:i') }} UTC
+                        <span class="user-tz-timestamp" data-iso="{{ $lastRun->toIso8601String() }}" data-format="metric">
+                            {{ $this->formatInUserTimezone($lastRun, 'M j, H:i') }}
+                        </span>
                     </div>
                     <div class="ctc-metric-subtext">
                         Ran {{ $lastRun->diffForHumans() }}
@@ -447,6 +449,7 @@
                     <div class="ctc-card-title">
                         <span>Last 10 Videos Added to Catalog</span>
                         <span class="ctc-badge ctc-badge-info">Latest Ingestions</span>
+                        <span class="ctc-badge ctc-badge-secondary" style="font-family: 'JetBrains Mono', monospace; font-size: 0.6875rem;" title="Times displayed in your local time zone">Timezone: <span class="user-tz-name">{{ str_replace('_', ' ', $this->getUserTimezone()) }}</span></span>
                     </div>
                     <div style="font-size: 0.8125rem; color: #94a3b8;">
                         The 10 most recent videos discovered and imported from the Cracking the Cryptic YouTube channel uploads playlist.
@@ -523,7 +526,13 @@
                                     <td>
                                         <div style="display: flex; flex-direction: column; gap: 0.125rem;">
                                             <span style="font-weight: 600; color: #f8fafc; font-size: 0.75rem;">
-                                                {{ $video->created_at ? $video->created_at->setTimezone('UTC')->format('M j, Y H:i') . ' UTC' : 'N/A' }}
+                                                @if ($video->created_at)
+                                                    <span class="user-tz-timestamp" data-iso="{{ $video->created_at->toIso8601String() }}" data-format="datetime">
+                                                        {{ $this->formatInUserTimezone($video->created_at, 'M j, Y H:i') }}
+                                                    </span>
+                                                @else
+                                                    N/A
+                                                @endif
                                             </span>
                                             <span style="font-size: 0.6875rem; color: #64748b;">
                                                 {{ $video->created_at?->diffForHumans() ?? '' }}
@@ -533,7 +542,13 @@
                                     <td>
                                         <div style="display: flex; flex-direction: column; gap: 0.125rem;">
                                             <span style="color: #cbd5e1; font-size: 0.75rem;">
-                                                {{ $video->published_at ? $video->published_at->setTimezone('UTC')->format('M j, Y') : 'N/A' }}
+                                                @if ($video->published_at)
+                                                    <span class="user-tz-timestamp" data-iso="{{ $video->published_at->toIso8601String() }}" data-format="date">
+                                                        {{ $this->formatInUserTimezone($video->published_at, 'M j, Y', false) }}
+                                                    </span>
+                                                @else
+                                                    N/A
+                                                @endif
                                             </span>
                                             <span style="font-size: 0.6875rem; color: #64748b;">
                                                 {{ $video->published_at?->diffForHumans() ?? '' }}
@@ -577,6 +592,7 @@
                     <div class="ctc-card-title">
                         <span>Recent Script Execution Logs</span>
                         <span class="ctc-badge ctc-badge-success">Audit Trail</span>
+                        <span class="ctc-badge ctc-badge-secondary" style="font-family: 'JetBrains Mono', monospace; font-size: 0.6875rem;" title="Times displayed in your local time zone">Timezone: <span class="user-tz-name">{{ str_replace('_', ' ', $this->getUserTimezone()) }}</span></span>
                     </div>
                     <div style="font-size: 0.8125rem; color: #94a3b8;">
                         Detailed execution records from background 30-minute sync runs and manual invocations.
@@ -623,7 +639,13 @@
                                     <td>
                                         <div style="display: flex; flex-direction: column; gap: 0.125rem;">
                                             <span style="font-weight: 600; color: #f8fafc; font-size: 0.75rem;">
-                                                {{ $log->started_at ? $log->started_at->setTimezone('UTC')->format('M j, Y H:i:s') . ' UTC' : 'N/A' }}
+                                                @if ($log->started_at)
+                                                    <span class="user-tz-timestamp" data-iso="{{ $log->started_at->toIso8601String() }}" data-format="seconds">
+                                                        {{ $this->formatInUserTimezone($log->started_at, 'M j, Y H:i:s') }}
+                                                    </span>
+                                                @else
+                                                    N/A
+                                                @endif
                                             </span>
                                             <span style="font-size: 0.6875rem; color: #64748b;">
                                                 {{ $log->started_at?->diffForHumans() ?? '' }}
@@ -846,4 +868,118 @@
             </p>
         </div>
     </div>
+
+    <script>
+        (function () {
+            function getTzAbbreviation(date, timeZone) {
+                try {
+                    const parts = new Intl.DateTimeFormat('en-US', {
+                        timeZone: timeZone,
+                        timeZoneName: 'short',
+                    }).formatToParts(date);
+                    const part = parts.find(p => p.type === 'timeZoneName');
+                    return part ? part.value : '';
+                } catch (e) {
+                    return '';
+                }
+            }
+
+            function syncUserTimezone() {
+                let userTz = 'UTC';
+                try {
+                    userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+                } catch (e) {
+                    userTz = 'UTC';
+                }
+
+                // Sync cookie so server-side PHP renders matching timezone on subsequent requests
+                const cookieMatch = document.cookie.match(/(?:^|; )ctc_user_timezone=([^;]*)/);
+                const currentCookieTz = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+                if (currentCookieTz !== userTz) {
+                    document.cookie = 'ctc_user_timezone=' + encodeURIComponent(userTz) + '; path=/; max-age=31536000; SameSite=Lax';
+                }
+
+                // Update timezone indicator labels
+                document.querySelectorAll('.user-tz-name').forEach(function (el) {
+                    el.textContent = userTz.replace(/_/g, ' ');
+                });
+
+                // Update all marked timestamp elements
+                document.querySelectorAll('.user-tz-timestamp').forEach(function (el) {
+                    const iso = el.getAttribute('data-iso');
+                    if (!iso) return;
+
+                    const date = new Date(iso);
+                    if (isNaN(date.getTime())) return;
+
+                    const formatType = el.getAttribute('data-format') || 'datetime';
+                    const tzAbbr = getTzAbbreviation(date, userTz);
+
+                    let formatted = '';
+                    if (formatType === 'metric') {
+                        // e.g. "Oct 15, 11:00 PDT"
+                        const month = date.toLocaleDateString('en-US', { month: 'short', timeZone: userTz });
+                        const day = date.toLocaleDateString('en-US', { day: 'numeric', timeZone: userTz });
+                        const timeStr = date.toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                            timeZone: userTz,
+                        });
+                        formatted = month + ' ' + day + ', ' + timeStr + (tzAbbr ? ' ' + tzAbbr : '');
+                    } else if (formatType === 'datetime') {
+                        // e.g. "Oct 15, 2026 11:00 PDT"
+                        const month = date.toLocaleDateString('en-US', { month: 'short', timeZone: userTz });
+                        const day = date.toLocaleDateString('en-US', { day: 'numeric', timeZone: userTz });
+                        const year = date.toLocaleDateString('en-US', { year: 'numeric', timeZone: userTz });
+                        const timeStr = date.toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false,
+                            timeZone: userTz,
+                        });
+                        formatted = month + ' ' + day + ', ' + year + ' ' + timeStr + (tzAbbr ? ' ' + tzAbbr : '');
+                    } else if (formatType === 'seconds') {
+                        // e.g. "Oct 15, 2026 11:00:00 PDT"
+                        const month = date.toLocaleDateString('en-US', { month: 'short', timeZone: userTz });
+                        const day = date.toLocaleDateString('en-US', { day: 'numeric', timeZone: userTz });
+                        const year = date.toLocaleDateString('en-US', { year: 'numeric', timeZone: userTz });
+                        const timeSec = date.toLocaleTimeString('en-US', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false,
+                            timeZone: userTz,
+                        });
+                        formatted = month + ' ' + day + ', ' + year + ' ' + timeSec + (tzAbbr ? ' ' + tzAbbr : '');
+                    } else if (formatType === 'date') {
+                        // e.g. "Oct 15, 2026"
+                        const month = date.toLocaleDateString('en-US', { month: 'short', timeZone: userTz });
+                        const day = date.toLocaleDateString('en-US', { day: 'numeric', timeZone: userTz });
+                        const year = date.toLocaleDateString('en-US', { year: 'numeric', timeZone: userTz });
+                        formatted = month + ' ' + day + ', ' + year;
+                    }
+
+                    if (formatted) {
+                        el.textContent = formatted;
+                    }
+                });
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', syncUserTimezone);
+            } else {
+                syncUserTimezone();
+            }
+
+            document.addEventListener('livewire:navigated', syncUserTimezone);
+            document.addEventListener('livewire:initialized', function () {
+                if (window.Livewire && window.Livewire.hook) {
+                    window.Livewire.hook('morph.updated', function () {
+                        syncUserTimezone();
+                    });
+                }
+            });
+        })();
+    </script>
 </x-filament-panels::page>
