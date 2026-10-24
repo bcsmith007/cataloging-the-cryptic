@@ -56,6 +56,11 @@ class CatalogueSeeder extends Seeder
             ['name' => 'GAS', 'description' => 'Generally Approachable Sudoku speed solves and mini puzzles.']
         );
 
+        $pencilPuzzle = Category::firstOrCreate(
+            ['slug' => 'pencil-puzzle'],
+            ['name' => 'Pencil Puzzle', 'description' => 'Japanese and logic pencil puzzles including Star Battle, Kakuro, Slitherlink, and related genres.']
+        );
+
         // 3. Top Constraints
         $constraintsData = [
             ['name' => 'Thermo', 'slug' => 'thermo', 'description' => 'Digits along thermometers must strictly increase from the bulb.'],
@@ -64,6 +69,8 @@ class CatalogueSeeder extends Seeder
             ['name' => 'German Whispers', 'slug' => 'german-whispers', 'description' => 'Adjacent digits along green lines must differ by at least 5.'],
             ['name' => 'Renban', 'slug' => 'renban', 'description' => 'Digits along purple lines form non-repeating consecutive sets in any order.'],
             ['name' => 'Fog of War', 'slug' => 'fog-of-war', 'description' => 'Entering correct digits reveals surrounding hidden cells.'],
+            ['name' => 'Star Battle', 'slug' => 'star-battle', 'description' => 'Place stars in the grid such that each row, column, and outlined shape contains a specified number of stars without touching.'],
+            ['name' => 'Kakuro', 'slug' => 'kakuro', 'description' => 'Cross-sums number puzzle where entries sum to clue totals using digits 1-9 without duplicates in any run.'],
         ];
 
         $constraints = [];
