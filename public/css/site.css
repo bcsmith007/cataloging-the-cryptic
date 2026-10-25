@@ -222,9 +222,10 @@ body {
     border-left: 3px solid #34d399;
 }
 
-/* Sizing for the beaker and small nav icons */
+/* Sizing for the shuffle and small nav icons */
 .ctc-public-header .ctc-nav-link svg,
 .ctc-public-header .ctc-mobile-nav-link svg,
+.ctc-public-header .ctc-shuffle-icon,
 .ctc-public-header .ctc-beaker-icon {
     width: 14px !important;
     height: 14px !important;

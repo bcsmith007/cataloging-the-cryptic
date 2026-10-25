@@ -157,6 +157,7 @@ class AdminPanelTest extends TestCase
         $response->assertSee(route('filament.admin.auth.profile'));
         $response->assertSee('width="14"', false);
         $response->assertSee('height="14"', false);
+        $response->assertSee('ctc-shuffle-icon', false);
         $response->assertSee('ctc-beaker-icon', false);
 
         // Verify Laravel/Filament info widget and default topbar are removed
