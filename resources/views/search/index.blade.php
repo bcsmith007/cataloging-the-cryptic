@@ -642,10 +642,10 @@
 
                                     @if ($puzzle->constraints->isNotEmpty())
                                         <div class="flex flex-wrap gap-1 pt-1">
-                                            @foreach ($puzzle->constraints as $constraint)
-                                                <span class="px-2 py-0.5 rounded bg-slate-800/80 text-amber-300 border border-slate-700/60 text-[11px] font-mono">
+                                            @foreach ($puzzle->constraints->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE) as $constraint)
+                                                <a href="{{ route('constraints.show', $constraint->slug) }}" class="px-2 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-amber-300 hover:text-emerald-400 border border-slate-700/60 text-[11px] font-mono transition-colors">
                                                     {{ $constraint->name }}
-                                                </span>
+                                                </a>
                                             @endforeach
                                         </div>
                                     @endif

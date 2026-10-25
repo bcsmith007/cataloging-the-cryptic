@@ -452,7 +452,7 @@
                             <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors flex items-center justify-between text-xs">
                                 <div class="flex items-center gap-2.5 min-w-0 pr-2">
                                     <span class="w-3 h-3 rounded-full shrink-0 constraint-dot" data-index="{{ $index }}"></span>
-                                    <span class="font-semibold text-slate-200 truncate" title="{{ $c['name'] }}">{{ $c['name'] }}</span>
+                                    <a href="{{ route('constraints.show', $c['slug']) }}" class="font-semibold text-slate-200 hover:text-emerald-400 transition-colors truncate" title="{{ $c['name'] }}">{{ $c['name'] }}</a>
                                 </div>
                                 <div class="flex items-center gap-3 shrink-0 font-mono">
                                     <span class="text-slate-400 text-[11px]">{{ $c['count'] }} {{ $c['count'] === 1 ? 'puzzle' : 'puzzles' }}</span>

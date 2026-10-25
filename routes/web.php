@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AppController;
+use App\Http\Controllers\ConstraintController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SetterController;
@@ -25,6 +26,10 @@ Route::get('/videos/{record}/edit', fn (Video $record) => redirect()->route('fil
 Route::get('/videos/{slug}', [VideoController::class, 'show'])->name('videos.show');
 Route::get('/setters', [SetterController::class, 'index'])->name('setters.index');
 Route::get('/setters/{setter}', [SetterController::class, 'show'])->name('setters.show');
+Route::get('/constraints', [ConstraintController::class, 'index'])->name('constraints.index');
+Route::get('/constraints/{constraint}', [ConstraintController::class, 'show'])->name('constraints.show');
+Route::get('/contraints', fn () => redirect()->route('constraints.index', [], 301));
+Route::get('/contraints/{constraint}', fn ($constraint) => redirect()->route('constraints.show', ['constraint' => $constraint], 301));
 Route::view('/privacy', 'privacy')->name('privacy');
 Route::get('/bookmark-player', function (Request $request) {
     $queryString = $request->getQueryString();

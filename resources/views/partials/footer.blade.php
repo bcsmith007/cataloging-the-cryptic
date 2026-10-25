@@ -7,6 +7,7 @@
             <a href="{{ route('videos.longest') }}" class="text-slate-400 hover:text-white transition-colors">Longest</a>
             <a href="{{ route('videos.shortest') }}" class="text-slate-400 hover:text-white transition-colors">Shortest</a>
             <a href="{{ route('setters.index') }}" class="text-slate-400 hover:text-white transition-colors">Setters</a>
+            <a href="{{ route('constraints.index') }}" class="text-slate-400 hover:text-white transition-colors">Constraints</a>
             <a href="{{ route('apps.index') }}" class="text-slate-400 hover:text-white transition-colors">Apps</a>
             <a href="{{ route('stats') }}" class="text-slate-400 hover:text-white transition-colors">Stats</a>
             <a href="{{ route('videos.random') }}" class="text-slate-400 hover:text-white transition-colors">Random</a>

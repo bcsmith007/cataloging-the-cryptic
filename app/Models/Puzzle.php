@@ -106,7 +106,8 @@ class Puzzle extends Model
      */
     public function constraints(): BelongsToMany
     {
-        return $this->belongsToMany(Constraint::class, 'puzzle_constraints');
+        return $this->belongsToMany(Constraint::class, 'puzzle_constraints')
+            ->orderBy('name', 'asc');
     }
 
     /**

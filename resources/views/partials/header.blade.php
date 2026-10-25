@@ -18,6 +18,7 @@
             <a href="{{ route('videos.longest') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('videos.longest') ? 'text-emerald-400 font-semibold' : '' }}">Longest</a>
             <a href="{{ route('videos.shortest') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('videos.shortest') ? 'text-emerald-400 font-semibold' : '' }}">Shortest</a>
             <a href="{{ route('setters.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('setters*') ? 'text-emerald-400 font-semibold' : '' }}">Setters</a>
+            <a href="{{ route('constraints.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('constraints*') ? 'text-emerald-400 font-semibold' : '' }}">Constraints</a>
             <a href="{{ route('apps.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('apps*') ? 'text-emerald-400 font-semibold' : '' }}">Apps</a>
             <a href="{{ route('stats') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('stats*') ? 'text-emerald-400 font-semibold' : '' }}">Stats</a>
             <a href="{{ route('videos.random') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors flex items-center gap-1.5" title="Take me to a random video">
@@ -73,6 +74,9 @@
             </a>
             <a href="{{ route('setters.index') }}" class="ctc-mobile-nav-link {{ request()->routeIs('setters*') ? 'active' : '' }}">
                 <span>Setters</span>
+            </a>
+            <a href="{{ route('constraints.index') }}" class="ctc-mobile-nav-link {{ request()->routeIs('constraints*') ? 'active' : '' }}">
+                <span>Constraints</span>
             </a>
             <a href="{{ route('apps.index') }}" class="ctc-mobile-nav-link {{ request()->routeIs('apps*') ? 'active' : '' }}">
                 <span>Apps</span>
