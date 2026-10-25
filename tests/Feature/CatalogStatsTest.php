@@ -54,7 +54,8 @@ class CatalogStatsTest extends TestCase
         $response->assertSee('Video Format Breakdown');
         $response->assertSee('Duration Sweet Spot Analysis');
         $response->assertSee('Publishing Cadence & Day-of-Week Performance', false);
-        $response->assertSee('Hall of Fame & All-Time Channel Records', false);
+        $response->assertSee('Most Viewed Video');
+        $response->assertSee('Channel Peak Months');
         $response->assertSee('Total Uploads by Puzzle Category');
         $response->assertSee('Unclassified');
         $response->assertSee('Standard Solves');
@@ -500,5 +501,106 @@ class CatalogStatsTest extends TestCase
         $response->assertSee($observations['format']);
         $response->assertSee($observations['duration']);
         $response->assertSee($observations['constraints']);
+    }
+
+    /**
+     * Test that intro and outro music statistics are properly computed, untagged videos are ignored,
+     * and both pie charts and shared legend are rendered on the stats page.
+     */
+    public function test_stats_page_computes_and_renders_intro_and_outro_music_pie_charts(): void
+    {
+        // Video 1: Both intro and outro tagged
+        Video::factory()->create([
+            'title' => 'Video 1',
+            'intro_music' => "Mark's Outro Music - Riffclown",
+            'outro_music' => "Mozart's Sonata No. 16",
+        ]);
+
+        // Video 2: Both intro and outro tagged
+        Video::factory()->create([
+            'title' => 'Video 2',
+            'intro_music' => "Mark's Outro Music - Riffclown",
+            'outro_music' => "Mark's Outro Music - Riffclown",
+        ]);
+
+        // Video 3: Only intro tagged
+        Video::factory()->create([
+            'title' => 'Video 3',
+            'intro_music' => "Mozart's Sonata No. 16",
+            'outro_music' => null,
+        ]);
+
+        // Video 4: Untagged (both null or empty) - must be ignored!
+        Video::factory()->create([
+            'title' => 'Untagged Video',
+            'intro_music' => null,
+            'outro_music' => '',
+        ]);
+
+        $response = $this->get(route('stats'));
+        $response->assertStatus(200);
+
+        /** @var array $musicStats */
+        $musicStats = $response->viewData('musicStats');
+        $this->assertIsArray($musicStats);
+
+        // Untagged videos must be excluded from totals
+        $this->assertSame(3, $musicStats['total_intro_tagged']);
+        $this->assertSame(2, $musicStats['total_outro_tagged']);
+        $this->assertSame(2, $musicStats['distinct_tracks']);
+
+        // Check intro breakdown
+        $introTracks = collect($musicStats['intro'])->pluck('count', 'track')->all();
+        $this->assertSame(2, $introTracks["Mark's Outro Music - Riffclown"]);
+        $this->assertSame(1, $introTracks["Mozart's Sonata No. 16"]);
+
+        // Check outro breakdown
+        $outroTracks = collect($musicStats['outro'])->pluck('count', 'track')->all();
+        $this->assertSame(1, $outroTracks["Mark's Outro Music - Riffclown"]);
+        $this->assertSame(1, $outroTracks["Mozart's Sonata No. 16"]);
+
+        // Check color consistency: each track must have the exact same color in intro, outro, and legend
+        $legendColors = collect($musicStats['legend'])->pluck('color', 'track')->all();
+        foreach ($musicStats['intro'] as $item) {
+            $this->assertSame($legendColors[$item['track']], $item['color']);
+        }
+        foreach ($musicStats['outro'] as $item) {
+            $this->assertSame($legendColors[$item['track']], $item['color']);
+        }
+
+        // View assertions
+        $response->assertSee('Intro & Outro Music Selections', false);
+        $response->assertSee('3 Tagged Intros');
+        $response->assertSee('2 Tagged Outros');
+        $response->assertSee('introMusicChart');
+        $response->assertSee('outroMusicChart');
+        $response->assertSee('Music Selections Legend');
+        $response->assertSee('Mark&#039;s Outro Music - Riffclown', false);
+        $response->assertSee('Mozart&#039;s Sonata No. 16', false);
+    }
+
+    /**
+     * Test that the stats page handles catalog when no music is tagged.
+     */
+    public function test_stats_page_handles_catalog_with_no_music_tagged(): void
+    {
+        Video::factory()->create([
+            'title' => 'No Music Video',
+            'intro_music' => null,
+            'outro_music' => null,
+        ]);
+
+        $response = $this->get(route('stats'));
+        $response->assertStatus(200);
+
+        /** @var array $musicStats */
+        $musicStats = $response->viewData('musicStats');
+        $this->assertSame(0, $musicStats['total_intro_tagged']);
+        $this->assertSame(0, $musicStats['total_outro_tagged']);
+        $this->assertCount(0, $musicStats['intro']);
+        $this->assertCount(0, $musicStats['outro']);
+        $this->assertCount(0, $musicStats['legend']);
+
+        $response->assertSee('No intro or outro music indexed in the catalog yet.');
     }
 }

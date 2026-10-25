@@ -44,53 +44,149 @@
         </div>
     </div>
 
-    {{-- Top KPI Cards --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {{-- Total Views --}}
-        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
-            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-colors"></div>
-            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Total Views</div>
-            <div class="text-3xl font-extrabold text-emerald-400 mt-2 tracking-tight font-mono">
-                {{ number_format($kpis['total_views']) }}
+    {{-- Top KPI Cards & Key Highlights --}}
+    <div class="space-y-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {{-- Total Views --}}
+            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-emerald-500/40 transition-colors">
+                <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl group-hover:bg-emerald-500/10 transition-colors"></div>
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Total Views</div>
+                <div class="text-3xl font-extrabold text-emerald-400 mt-2 tracking-tight font-mono">
+                    {{ number_format($kpis['total_views']) }}
+                </div>
+                <div class="text-xs text-slate-400 mt-1">
+                    Median {{ number_format($kpis['median_views']) }} views per video
+                </div>
             </div>
-            <div class="text-xs text-slate-400 mt-1">
-                Median {{ number_format($kpis['median_views']) }} views per video
+
+            {{-- Total Videos --}}
+            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-sky-500/40 transition-colors">
+                <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-sky-500/5 rounded-full blur-xl group-hover:bg-sky-500/10 transition-colors"></div>
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Catalog Videos</div>
+                <div class="text-3xl font-extrabold text-sky-400 mt-2 tracking-tight font-mono">
+                    {{ number_format($kpis['total_videos']) }}
+                </div>
+                <div class="text-xs text-slate-400 mt-1">
+                    {{ number_format($formatStats['youtube']['count']) }} standard &bull; {{ number_format($formatStats['youtube_short']['count']) }} shorts
+                </div>
+            </div>
+
+            {{-- Total Footage Duration --}}
+            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-purple-500/40 transition-colors">
+                <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-purple-500/5 rounded-full blur-xl group-hover:bg-purple-500/10 transition-colors"></div>
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Solve Footage</div>
+                <div class="text-3xl font-extrabold text-purple-400 mt-2 tracking-tight font-mono">
+                    {{ number_format($kpis['total_hours']) }} hrs
+                </div>
+                <div class="text-xs text-slate-400 mt-1">
+                    Equivalent to {{ number_format($kpis['total_days_footage'], 1) }} days of continuous solves
+                </div>
+            </div>
+
+            {{-- Median Video Length --}}
+            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-amber-500/40 transition-colors">
+                <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-amber-500/5 rounded-full blur-xl group-hover:bg-amber-500/10 transition-colors"></div>
+                <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Median Video Length</div>
+                <div class="text-3xl font-extrabold text-amber-400 mt-2 tracking-tight font-mono">
+                    {{ $kpis['median_duration_formatted'] }}
+                </div>
+                <div class="text-xs text-slate-400 mt-1">
+                    Standard solves median {{ $formatStats['youtube']['median_duration_formatted'] }}
+                </div>
             </div>
         </div>
 
-        {{-- Total Videos --}}
-        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-sky-500/40 transition-colors">
-            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-sky-500/5 rounded-full blur-xl group-hover:bg-sky-500/10 transition-colors"></div>
-            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Catalog Videos</div>
-            <div class="text-3xl font-extrabold text-sky-400 mt-2 tracking-tight font-mono">
-                {{ number_format($kpis['total_videos']) }}
-            </div>
-            <div class="text-xs text-slate-400 mt-1">
-                {{ number_format($formatStats['youtube']['count']) }} standard &bull; {{ number_format($formatStats['youtube_short']['count']) }} shorts
-            </div>
-        </div>
+        {{-- Row 2: Milestone & Record Highlights --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {{-- Most Viewed Standard --}}
+            @if (!empty($milestones['most_viewed_standard']))
+                @php $v = $milestones['most_viewed_standard']; @endphp
+                <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-amber-500/40 transition-colors">
+                    <div>
+                        <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono">
+                            <span>Most Viewed Video</span>
+                            <span>#1</span>
+                        </div>
+                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="mt-2 block font-bold text-slate-100 hover:text-emerald-400 transition-colors text-sm line-clamp-2">
+                            {{ data_get($v, 'title') }}
+                        </a>
+                        <div class="text-xs text-slate-400 mt-1">
+                            Published {{ data_get($v, 'published_at') ? \App\Services\TimezoneService::format(data_get($v, 'published_at')) : 'N/A' }}
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                        <span class="text-lg font-extrabold text-amber-400 font-mono">{{ number_format((int) data_get($v, 'view_count', 0)) }} views</span>
+                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="text-xs text-emerald-400 hover:underline">Watch &rarr;</a>
+                    </div>
+                </div>
+            @endif
 
-        {{-- Total Footage Duration --}}
-        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-purple-500/40 transition-colors">
-            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-purple-500/5 rounded-full blur-xl group-hover:bg-purple-500/10 transition-colors"></div>
-            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Solve Footage</div>
-            <div class="text-3xl font-extrabold text-purple-400 mt-2 tracking-tight font-mono">
-                {{ number_format($kpis['total_hours']) }} hrs
-            </div>
-            <div class="text-xs text-slate-400 mt-1">
-                Equivalent to {{ number_format($kpis['total_days_footage'], 1) }} days of continuous solves
-            </div>
-        </div>
+            {{-- Most Viewed Short --}}
+            @if (!empty($milestones['most_viewed_short']))
+                @php $v = $milestones['most_viewed_short']; @endphp
+                <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-sky-500/40 transition-colors">
+                    <div>
+                        <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-sky-400 font-mono">
+                            <span>Most Viewed Short</span>
+                            <span>#1 Short</span>
+                        </div>
+                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="mt-2 block font-bold text-slate-100 hover:text-emerald-400 transition-colors text-sm line-clamp-2">
+                            {{ data_get($v, 'title') }}
+                        </a>
+                        <div class="text-xs text-slate-400 mt-1">
+                            Published {{ data_get($v, 'published_at') ? \App\Services\TimezoneService::format(data_get($v, 'published_at')) : 'N/A' }}
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                        <span class="text-lg font-extrabold text-sky-400 font-mono">{{ number_format((int) data_get($v, 'view_count', 0)) }} views</span>
+                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="text-xs text-emerald-400 hover:underline">Watch &rarr;</a>
+                    </div>
+                </div>
+            @endif
 
-        {{-- Median Video Length --}}
-        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-amber-500/40 transition-colors">
-            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-amber-500/5 rounded-full blur-xl group-hover:bg-amber-500/10 transition-colors"></div>
-            <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-mono">Median Video Length</div>
-            <div class="text-3xl font-extrabold text-amber-400 mt-2 tracking-tight font-mono">
-                {{ $kpis['median_duration_formatted'] }}
-            </div>
-            <div class="text-xs text-slate-400 mt-1">
-                Standard solves median {{ $formatStats['youtube']['median_duration_formatted'] }}
+            {{-- Longest Video --}}
+            @if (!empty($milestones['longest_solve']))
+                @php $v = $milestones['longest_solve']; @endphp
+                <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-purple-500/40 transition-colors">
+                    <div>
+                        <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-purple-400 font-mono">
+                            <span>Longest Solve</span>
+                            <span>Marathon</span>
+                        </div>
+                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="mt-2 block font-bold text-slate-100 hover:text-emerald-400 transition-colors text-sm line-clamp-2">
+                            {{ data_get($v, 'title') }}
+                        </a>
+                        <div class="text-xs text-slate-400 mt-1">
+                            Duration: {{ data_get($v, 'duration_formatted', '0s') }} ({{ data_get($v, 'duration_hours', 0) }} hours)
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                        <span class="text-sm font-semibold text-slate-300 font-mono">{{ number_format((int) data_get($v, 'view_count', 0)) }} views</span>
+                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="text-xs text-emerald-400 hover:underline">Watch &rarr;</a>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Peak Records --}}
+            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 shadow-lg flex flex-col justify-between hover:border-emerald-500/40 transition-colors">
+                <div>
+                    <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400 font-mono">
+                        Channel Peak Months
+                    </div>
+                    <div class="mt-3 space-y-3 text-xs">
+                        <div>
+                            <span class="text-slate-400 block">Record Viewership Month:</span>
+                            <span class="font-bold text-slate-200 block text-sm mt-0.5">{{ $milestones['peak_views_month'] ?? 'May 2020' }}</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-400 block">Record Upload Month:</span>
+                            <span class="font-bold text-slate-200 block text-sm mt-0.5">{{ $milestones['peak_upload_month'] ?? 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-slate-800/80 text-right">
+                    <a href="{{ route('videos.index') }}" class="text-xs text-emerald-400 hover:underline">Explore Catalog &rarr;</a>
+                </div>
             </div>
         </div>
     </div>
@@ -378,6 +474,118 @@
         @endif
     </div>
 
+    {{-- Main Section: Music Selections Breakdown (Intro & Outro Pie Charts) --}}
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-4">
+            <div>
+                <h3 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                    Intro & Outro Music Selections
+                </h3>
+                <p class="text-xs text-slate-400 mt-1">
+                    Distribution of intro and outro themes across videos with indexed audio tracks. Untagged videos are excluded.
+                </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
+                    {{ $musicStats['total_intro_tagged'] ?? 0 }} Tagged Intros
+                </span>
+                <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 font-mono">
+                    {{ $musicStats['total_outro_tagged'] ?? 0 }} Tagged Outros
+                </span>
+            </div>
+        </div>
+
+        @if (!empty($musicStats['intro']) || !empty($musicStats['outro']))
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                {{-- Left: Intro Music Pie Chart --}}
+                <div class="lg:col-span-4 flex flex-col items-center justify-center">
+                    <div class="text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        Intro Music
+                    </div>
+                    @if (!empty($musicStats['intro']))
+                        <div class="relative w-full max-w-[280px]" style="height: 260px;">
+                            <canvas id="introMusicChart"></canvas>
+                        </div>
+                        <div class="text-[11px] text-slate-400 mt-2 font-mono text-center">
+                            {{ number_format($musicStats['total_intro_tagged']) }} tagged videos ({{ count($musicStats['intro']) }} {{ count($musicStats['intro']) === 1 ? 'track' : 'tracks' }})
+                        </div>
+                    @else
+                        <div class="p-8 text-center text-slate-400 text-xs">
+                            No intro music tagged yet.
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Middle: Common Shared Legend --}}
+                <div class="lg:col-span-4 border-y lg:border-y-0 lg:border-x border-slate-800/80 py-4 lg:py-0 lg:px-6">
+                    <div class="text-xs font-semibold text-slate-300 mb-3 text-center uppercase tracking-wider font-mono">
+                        Music Selections Legend
+                    </div>
+                    @if (!empty($musicStats['legend']))
+                        <div class="space-y-2.5 max-h-[320px] overflow-y-auto pr-1">
+                            @foreach ($musicStats['legend'] as $item)
+                                <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        <span class="w-3 h-3 rounded-full shrink-0" style="background-color: {{ $item['color'] }};"></span>
+                                        <span class="font-semibold text-slate-200 text-xs truncate" title="{{ $item['track'] }}">
+                                            {{ $item['track'] }}
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 mt-2 pt-1.5 border-t border-slate-800/60">
+                                        <div>
+                                            <span class="text-slate-400">Intro:</span>
+                                            <span class="text-slate-200 font-semibold">{{ $item['intro_count'] }}</span>
+                                            @if ($item['intro_count'] > 0)
+                                                <span class="text-emerald-400 font-semibold">({{ $item['intro_percentage'] }}%)</span>
+                                            @endif
+                                        </div>
+                                        <div>
+                                            <span class="text-slate-400">Outro:</span>
+                                            <span class="text-slate-200 font-semibold">{{ $item['outro_count'] }}</span>
+                                            @if ($item['outro_count'] > 0)
+                                                <span class="text-sky-400 font-semibold">({{ $item['outro_percentage'] }}%)</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <div class="p-6 text-center text-slate-400 text-xs">
+                            No music data available.
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Right: Outro Music Pie Chart --}}
+                <div class="lg:col-span-4 flex flex-col items-center justify-center">
+                    <div class="text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+                        Outro Music
+                    </div>
+                    @if (!empty($musicStats['outro']))
+                        <div class="relative w-full max-w-[280px]" style="height: 260px;">
+                            <canvas id="outroMusicChart"></canvas>
+                        </div>
+                        <div class="text-[11px] text-slate-400 mt-2 font-mono text-center">
+                            {{ number_format($musicStats['total_outro_tagged']) }} tagged videos ({{ count($musicStats['outro']) }} {{ count($musicStats['outro']) === 1 ? 'track' : 'tracks' }})
+                        </div>
+                    @else
+                        <div class="p-8 text-center text-slate-400 text-xs">
+                            No outro music tagged yet.
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @else
+            <div class="p-8 text-center text-slate-400 text-xs">
+                No intro or outro music indexed in the catalog yet.
+            </div>
+        @endif
+    </div>
+
     {{-- Main Section 3: Publishing Cadence & Day of Week --}}
     <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-4">
@@ -406,111 +614,6 @@
                     <div class="text-emerald-400 font-mono font-semibold mt-1">{{ number_format($d['median_views']) }} median</div>
                 </div>
             @endforeach
-        </div>
-    </div>
-
-    {{-- Main Section 4: Channel Milestones & Hall of Fame --}}
-    <div class="space-y-4">
-        <div class="border-b border-slate-800 pb-3">
-            <h3 class="text-lg font-bold text-white tracking-tight">
-                Hall of Fame & All-Time Channel Records
-            </h3>
-            <p class="text-xs text-slate-400 mt-1">
-                Notable high-water marks across views, marathon solves, and release records.
-            </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-            {{-- Most Viewed Standard --}}
-            @if (!empty($milestones['most_viewed_standard']))
-                @php $v = $milestones['most_viewed_standard']; @endphp
-                <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col justify-between hover:border-amber-500/40 transition-colors">
-                    <div>
-                        <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-amber-400 font-mono">
-                            <span>Most Viewed Video</span>
-                            <span>#1</span>
-                        </div>
-                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="mt-2 block font-bold text-slate-100 hover:text-emerald-400 transition-colors text-sm line-clamp-2">
-                            {{ data_get($v, 'title') }}
-                        </a>
-                        <div class="text-xs text-slate-400 mt-1">
-                            Published {{ data_get($v, 'published_at') ? \App\Services\TimezoneService::format(data_get($v, 'published_at')) : 'N/A' }}
-                        </div>
-                    </div>
-                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                        <span class="text-lg font-extrabold text-amber-400 font-mono">{{ number_format((int) data_get($v, 'view_count', 0)) }}</span>
-                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="text-xs text-emerald-400 hover:underline">Watch &rarr;</a>
-                    </div>
-                </div>
-            @endif
-
-            {{-- Most Viewed Short --}}
-            @if (!empty($milestones['most_viewed_short']))
-                @php $v = $milestones['most_viewed_short']; @endphp
-                <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col justify-between hover:border-sky-500/40 transition-colors">
-                    <div>
-                        <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-sky-400 font-mono">
-                            <span>Most Viewed Short</span>
-                            <span>#1 Short</span>
-                        </div>
-                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="mt-2 block font-bold text-slate-100 hover:text-emerald-400 transition-colors text-sm line-clamp-2">
-                            {{ data_get($v, 'title') }}
-                        </a>
-                        <div class="text-xs text-slate-400 mt-1">
-                            Published {{ data_get($v, 'published_at') ? \App\Services\TimezoneService::format(data_get($v, 'published_at')) : 'N/A' }}
-                        </div>
-                    </div>
-                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                        <span class="text-lg font-extrabold text-sky-400 font-mono">{{ number_format((int) data_get($v, 'view_count', 0)) }}</span>
-                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="text-xs text-emerald-400 hover:underline">Watch &rarr;</a>
-                    </div>
-                </div>
-            @endif
-
-            {{-- Longest Video --}}
-            @if (!empty($milestones['longest_solve']))
-                @php $v = $milestones['longest_solve']; @endphp
-                <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col justify-between hover:border-purple-500/40 transition-colors">
-                    <div>
-                        <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-purple-400 font-mono">
-                            <span>Longest Solve</span>
-                            <span>Marathon</span>
-                        </div>
-                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="mt-2 block font-bold text-slate-100 hover:text-emerald-400 transition-colors text-sm line-clamp-2">
-                            {{ data_get($v, 'title') }}
-                        </a>
-                        <div class="text-xs text-slate-400 mt-1">
-                            Duration: {{ data_get($v, 'duration_formatted', '0s') }} ({{ data_get($v, 'duration_hours', 0) }} hours)
-                        </div>
-                    </div>
-                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
-                        <span class="text-sm font-semibold text-slate-300 font-mono">{{ number_format((int) data_get($v, 'view_count', 0)) }} views</span>
-                        <a href="{{ route('videos.show', ['slug' => data_get($v, 'slug')]) }}" class="text-xs text-emerald-400 hover:underline">Watch &rarr;</a>
-                    </div>
-                </div>
-            @endif
-
-            {{-- Peak Records --}}
-            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 shadow-lg flex flex-col justify-between hover:border-emerald-500/40 transition-colors">
-                <div>
-                    <div class="text-xs font-semibold uppercase tracking-wider text-emerald-400 font-mono">
-                        Channel Peak Months
-                    </div>
-                    <div class="mt-3 space-y-3 text-xs">
-                        <div>
-                            <span class="text-slate-400 block">Record Viewership Month:</span>
-                            <span class="font-bold text-slate-200 block text-sm mt-0.5">{{ $milestones['peak_views_month'] ?? 'May 2020' }}</span>
-                        </div>
-                        <div>
-                            <span class="text-slate-400 block">Record Upload Month:</span>
-                            <span class="font-bold text-slate-200 block text-sm mt-0.5">{{ $milestones['peak_upload_month'] ?? 'N/A' }}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-4 pt-3 border-t border-slate-800/80 text-right">
-                    <a href="{{ route('videos.index') }}" class="text-xs text-emerald-400 hover:underline">Explore Catalog &rarr;</a>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -1296,6 +1399,97 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }
+    }
+
+    // -----------------------------------------------------------------
+    // Music Selections Pie Charts (Intro & Outro with Shared Palette)
+    // -----------------------------------------------------------------
+    const musicStats = @json($musicStats ?? ['intro' => [], 'outro' => []]);
+
+    const introCanvas = document.getElementById('introMusicChart');
+    if (introCanvas && musicStats.intro && musicStats.intro.length > 0) {
+        const introCtx = introCanvas.getContext('2d');
+        new Chart(introCtx, {
+            type: 'pie',
+            data: {
+                labels: musicStats.intro.map(item => item.track),
+                datasets: [{
+                    data: musicStats.intro.map(item => item.count),
+                    backgroundColor: musicStats.intro.map(item => item.color),
+                    borderColor: '#020617',
+                    borderWidth: 2,
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        backgroundColor: '#020617',
+                        borderColor: '#1e293b',
+                        borderWidth: 1,
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        padding: 10,
+                        callbacks: {
+                            label: function (ctx) {
+                                const val = ctx.raw || 0;
+                                const item = musicStats.intro[ctx.dataIndex];
+                                const pct = item ? item.percentage : 0;
+                                return ` ${ctx.label}: ${val} ${val === 1 ? 'video' : 'videos'} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    const outroCanvas = document.getElementById('outroMusicChart');
+    if (outroCanvas && musicStats.outro && musicStats.outro.length > 0) {
+        const outroCtx = outroCanvas.getContext('2d');
+        new Chart(outroCtx, {
+            type: 'pie',
+            data: {
+                labels: musicStats.outro.map(item => item.track),
+                datasets: [{
+                    data: musicStats.outro.map(item => item.count),
+                    backgroundColor: musicStats.outro.map(item => item.color),
+                    borderColor: '#020617',
+                    borderWidth: 2,
+                    hoverOffset: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        backgroundColor: '#020617',
+                        borderColor: '#1e293b',
+                        borderWidth: 1,
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        padding: 10,
+                        callbacks: {
+                            label: function (ctx) {
+                                const val = ctx.raw || 0;
+                                const item = musicStats.outro[ctx.dataIndex];
+                                const pct = item ? item.percentage : 0;
+                                return ` ${ctx.label}: ${val} ${val === 1 ? 'video' : 'videos'} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 });
 </script>

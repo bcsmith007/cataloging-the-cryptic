@@ -18,13 +18,13 @@ class StatsController extends Controller
      */
     public function index(): View
     {
-        $stats = Cache::remember('catalog_analytics_summary_v4', 1800, function () {
+        $stats = Cache::remember('catalog_analytics_summary_v5', 1800, function () {
             return $this->computeStats();
         });
 
-        if (! is_array($stats) || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'])) {
+        if (! is_array($stats) || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'])) {
             $stats = $this->computeStats();
-            Cache::put('catalog_analytics_summary_v4', $stats, 1800);
+            Cache::put('catalog_analytics_summary_v5', $stats, 1800);
         }
 
         $stats['categoryMonthly'] = $stats['categoryMonthly'] ?? [];
@@ -32,6 +32,14 @@ class StatsController extends Controller
         $stats['totalConstraintOccurrences'] = $stats['totalConstraintOccurrences'] ?? 0;
         $stats['totalVariantPuzzles'] = $stats['totalVariantPuzzles'] ?? 0;
         $stats['observations'] = $stats['observations'] ?? [];
+        $stats['musicStats'] = $stats['musicStats'] ?? [
+            'intro' => [],
+            'outro' => [],
+            'legend' => [],
+            'total_intro_tagged' => 0,
+            'total_outro_tagged' => 0,
+            'distinct_tracks' => 0,
+        ];
 
         return view('stats.index', $stats);
     }
@@ -500,6 +508,8 @@ class StatsController extends Controller
             ];
         })->values()->all();
 
+        $musicStats = $this->computeMusicStats();
+
         return [
             'kpis' => [
                 'total_videos' => $totalVideos,
@@ -526,6 +536,7 @@ class StatsController extends Controller
             'constraintStats' => $constraintStats,
             'totalConstraintOccurrences' => $totalConstraintOccurrences,
             'totalVariantPuzzles' => $totalVariantPuzzles,
+            'musicStats' => $musicStats,
             'milestones' => [
                 'most_viewed_standard' => $this->serializeVideoRecord($mostViewedStandard),
                 'most_viewed_short' => $this->serializeVideoRecord($mostViewedShort),
@@ -677,5 +688,135 @@ class StatsController extends Controller
         }
 
         return ((float) $values[$middle - 1] + (float) $values[$middle]) / 2.0;
+    }
+
+    /**
+     * Compute intro and outro music breakdown across tagged videos.
+     * Videos without tagged music are excluded.
+     *
+     * @return array<string, mixed>
+     */
+    protected function computeMusicStats(): array
+    {
+        $introMusicCounts = DB::table('videos')
+            ->whereNotNull('intro_music')
+            ->where('intro_music', '!=', '')
+            ->selectRaw('intro_music, count(*) as count')
+            ->groupBy('intro_music')
+            ->orderByDesc('count')
+            ->pluck('count', 'intro_music')
+            ->toArray();
+
+        $outroMusicCounts = DB::table('videos')
+            ->whereNotNull('outro_music')
+            ->where('outro_music', '!=', '')
+            ->selectRaw('outro_music, count(*) as count')
+            ->groupBy('outro_music')
+            ->orderByDesc('count')
+            ->pluck('count', 'outro_music')
+            ->toArray();
+
+        $normalizedIntro = [];
+        foreach ($introMusicCounts as $track => $count) {
+            $t = trim((string) $track);
+            if ($t !== '') {
+                $normalizedIntro[$t] = ($normalizedIntro[$t] ?? 0) + (int) $count;
+            }
+        }
+
+        $normalizedOutro = [];
+        foreach ($outroMusicCounts as $track => $count) {
+            $t = trim((string) $track);
+            if ($t !== '') {
+                $normalizedOutro[$t] = ($normalizedOutro[$t] ?? 0) + (int) $count;
+            }
+        }
+
+        $allUniqueTracks = array_values(array_unique(array_merge(array_keys($normalizedIntro), array_keys($normalizedOutro))));
+
+        // Sort tracks by total frequency descending, then alphabetically by track name
+        usort($allUniqueTracks, function (string $a, string $b) use ($normalizedIntro, $normalizedOutro): int {
+            $totalA = ($normalizedIntro[$a] ?? 0) + ($normalizedOutro[$a] ?? 0);
+            $totalB = ($normalizedIntro[$b] ?? 0) + ($normalizedOutro[$b] ?? 0);
+
+            if ($totalA === $totalB) {
+                return strcmp($a, $b);
+            }
+
+            return $totalB <=> $totalA;
+        });
+
+        $palette = [
+            '#10b981', // emerald-500
+            '#38bdf8', // sky-400
+            '#f59e0b', // amber-500
+            '#a855f7', // purple-500
+            '#ec4899', // pink-500
+            '#f97316', // orange-500
+            '#06b6d4', // cyan-500
+            '#84cc16', // lime-500
+            '#6366f1', // indigo-500
+            '#14b8a6', // teal-500
+            '#f43f5e', // rose-500
+            '#eab308', // yellow-500
+            '#d946ef', // fuchsia-500
+            '#3b82f6', // blue-500
+            '#22c55e', // green-500
+            '#8b5cf6', // violet-500
+        ];
+
+        $trackColorMap = [];
+        foreach ($allUniqueTracks as $idx => $track) {
+            $trackColorMap[$track] = $palette[$idx % count($palette)];
+        }
+
+        $totalIntro = array_sum($normalizedIntro);
+        $totalOutro = array_sum($normalizedOutro);
+
+        arsort($normalizedIntro);
+        $introItems = [];
+        foreach ($normalizedIntro as $track => $count) {
+            $introItems[] = [
+                'track' => $track,
+                'count' => (int) $count,
+                'percentage' => $totalIntro > 0 ? round(($count / $totalIntro) * 100, 1) : 0,
+                'color' => $trackColorMap[$track] ?? '#94a3b8',
+            ];
+        }
+
+        arsort($normalizedOutro);
+        $outroItems = [];
+        foreach ($normalizedOutro as $track => $count) {
+            $outroItems[] = [
+                'track' => $track,
+                'count' => (int) $count,
+                'percentage' => $totalOutro > 0 ? round(($count / $totalOutro) * 100, 1) : 0,
+                'color' => $trackColorMap[$track] ?? '#94a3b8',
+            ];
+        }
+
+        $legendItems = [];
+        foreach ($allUniqueTracks as $track) {
+            $inCnt = $normalizedIntro[$track] ?? 0;
+            $outCnt = $normalizedOutro[$track] ?? 0;
+            $legendItems[] = [
+                'track' => $track,
+                'color' => $trackColorMap[$track] ?? '#94a3b8',
+                'intro_count' => $inCnt,
+                'intro_percentage' => $totalIntro > 0 ? round(($inCnt / $totalIntro) * 100, 1) : 0,
+                'outro_count' => $outCnt,
+                'outro_percentage' => $totalOutro > 0 ? round(($outCnt / $totalOutro) * 100, 1) : 0,
+                'total_count' => $inCnt + $outCnt,
+            ];
+        }
+
+        return [
+            'intro' => $introItems,
+            'outro' => $outroItems,
+            'legend' => $legendItems,
+            'total_intro_tagged' => $totalIntro,
+            'total_outro_tagged' => $totalOutro,
+            'distinct_tracks' => count($allUniqueTracks),
+        ];
     }
 }
