@@ -449,7 +449,7 @@
                     <div class="ctc-card-title">
                         <span>Last 10 Videos Added to Catalog</span>
                         <span class="ctc-badge ctc-badge-info">Latest Ingestions</span>
-                        <span class="ctc-badge ctc-badge-secondary" style="font-family: 'JetBrains Mono', monospace; font-size: 0.6875rem;" title="Times displayed in your local time zone">Timezone: <span class="user-tz-name">{{ str_replace('_', ' ', $this->getUserTimezone()) }}</span></span>
+                        <span class="ctc-badge ctc-badge-secondary" style="font-family: 'JetBrains Mono', monospace; font-size: 0.6875rem;" title="Times displayed in your profile timezone">Timezone: <span class="user-tz-name">{{ str_replace('_', ' ', $this->getUserTimezone()) }}</span></span>
                     </div>
                     <div style="font-size: 0.8125rem; color: #94a3b8;">
                         The 10 most recent videos discovered and imported from the Cracking the Cryptic YouTube channel uploads playlist.
@@ -592,7 +592,7 @@
                     <div class="ctc-card-title">
                         <span>Recent Script Execution Logs</span>
                         <span class="ctc-badge ctc-badge-success">Audit Trail</span>
-                        <span class="ctc-badge ctc-badge-secondary" style="font-family: 'JetBrains Mono', monospace; font-size: 0.6875rem;" title="Times displayed in your local time zone">Timezone: <span class="user-tz-name">{{ str_replace('_', ' ', $this->getUserTimezone()) }}</span></span>
+                        <span class="ctc-badge ctc-badge-secondary" style="font-family: 'JetBrains Mono', monospace; font-size: 0.6875rem;" title="Times displayed in your profile timezone">Timezone: <span class="user-tz-name">{{ str_replace('_', ' ', $this->getUserTimezone()) }}</span></span>
                     </div>
                     <div style="font-size: 0.8125rem; color: #94a3b8;">
                         Detailed execution records from background 30-minute sync runs and manual invocations.
@@ -871,6 +871,8 @@
 
     <script>
         (function () {
+            const userTz = @js($this->getUserTimezone()) || 'UTC';
+
             function getTzAbbreviation(date, timeZone) {
                 try {
                     const parts = new Intl.DateTimeFormat('en-US', {
@@ -885,21 +887,14 @@
             }
 
             function syncUserTimezone() {
-                let userTz = 'UTC';
-                try {
-                    userTz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-                } catch (e) {
-                    userTz = 'UTC';
-                }
-
                 // Sync cookie so server-side PHP renders matching timezone on subsequent requests
                 const cookieMatch = document.cookie.match(/(?:^|; )ctc_user_timezone=([^;]*)/);
                 const currentCookieTz = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
-                if (currentCookieTz !== userTz) {
+                if (userTz && currentCookieTz !== userTz) {
                     document.cookie = 'ctc_user_timezone=' + encodeURIComponent(userTz) + '; path=/; max-age=31536000; SameSite=Lax';
                 }
 
-                // Update timezone indicator labels
+                // Update timezone indicator labels with the user profile timezone
                 document.querySelectorAll('.user-tz-name').forEach(function (el) {
                     el.textContent = userTz.replace(/_/g, ' ');
                 });

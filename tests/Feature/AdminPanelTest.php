@@ -1851,6 +1851,8 @@ class AdminPanelTest extends TestCase
         $response->assertSee('America/Los Angeles');
         $response->assertSee('user-tz-timestamp', false);
         $response->assertSee('data-iso="2026-10-15T18:00:00', false);
+        $response->assertDontSee('Intl.DateTimeFormat().resolvedOptions().timeZone', false);
+        $response->assertSee("const userTz = 'America\/Los_Angeles'", false);
 
         // 2. Verify database records remain stored in UTC
         $this->assertSame('2026-10-15 18:00:00', $video->fresh()->created_at->format('Y-m-d H:i:s'));
