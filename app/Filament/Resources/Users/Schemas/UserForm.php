@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Services\TimezoneService;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
@@ -37,6 +39,16 @@ class UserForm
                                 ->required()
                                 ->maxLength(255)
                                 ->unique(ignoreRecord: true),
+
+                            Select::make('timezone')
+                                ->label('Timezone')
+                                ->searchable()
+                                ->options(TimezoneService::getTimezoneOptions())
+                                ->optionsLimit(1000)
+                                ->default(config('app.timezone', 'UTC'))
+                                ->required()
+                                ->helperText('Preferred display timezone for timestamps across the catalog.')
+                                ->columnSpanFull(),
                         ]),
 
                         TextInput::make('password')

@@ -1814,7 +1814,9 @@ class AdminPanelTest extends TestCase
      */
     public function test_youtube_update_scripts_page_shifts_displayed_times_to_user_timezone(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create([
+            'timezone' => 'America/Los_Angeles',
+        ]);
         $this->actingAs($user);
 
         // Put last run in cache as UTC: 2026-10-15 18:00:00 UTC

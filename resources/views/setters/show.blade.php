@@ -250,7 +250,7 @@
                             <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
                                 <span>{{ number_format($video->view_count) }} views</span>
                                 <span class="font-mono text-slate-500">
-                                    {{ $video->published_at?->format('M j, Y') ?? 'Unknown date' }}
+                                    {{ $video->published_at ? \App\Services\TimezoneService::format($video->published_at) : 'Unknown date' }}
                                 </span>
                             </div>
                         </div>

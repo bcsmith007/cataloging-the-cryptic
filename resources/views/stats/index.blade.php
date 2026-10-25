@@ -434,7 +434,7 @@
                             {{ data_get($v, 'title') }}
                         </a>
                         <div class="text-xs text-slate-400 mt-1">
-                            Published {{ data_get($v, 'published_at', 'N/A') }}
+                            Published {{ data_get($v, 'published_at') ? \App\Services\TimezoneService::format(data_get($v, 'published_at')) : 'N/A' }}
                         </div>
                     </div>
                     <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
@@ -457,7 +457,7 @@
                             {{ data_get($v, 'title') }}
                         </a>
                         <div class="text-xs text-slate-400 mt-1">
-                            Published {{ data_get($v, 'published_at', 'N/A') }}
+                            Published {{ data_get($v, 'published_at') ? \App\Services\TimezoneService::format(data_get($v, 'published_at')) : 'N/A' }}
                         </div>
                     </div>
                     <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">

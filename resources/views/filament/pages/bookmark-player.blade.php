@@ -41,7 +41,7 @@
                                 data-youtube-id="{{ $optYtId }}"
                                 @selected($vid->id === $selectedVideoId)
                             >
-                                {{ $vid->title }} ({{ $vid->published_at ? $vid->published_at->format('M j, Y') : 'Draft' }})
+                                {{ $vid->title }} ({{ $vid->published_at ? \App\Services\TimezoneService::format($vid->published_at) : 'Draft' }})
                             </option>
                         @endforeach
                     </select>

@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Video;
 use App\Models\YouTubeSyncLog;
+use App\Services\TimezoneService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -131,16 +132,7 @@ class YouTubeUpdateScripts extends Page
      */
     public function getUserTimezone(): string
     {
-        $cookieTz = request()->cookie('ctc_user_timezone');
-        if ($cookieTz && in_array($cookieTz, timezone_identifiers_list(), true)) {
-            return $cookieTz;
-        }
-
-        if (auth()->check() && ! empty(auth()->user()->timezone) && in_array(auth()->user()->timezone, timezone_identifiers_list(), true)) {
-            return auth()->user()->timezone;
-        }
-
-        return config('app.user_timezone', 'UTC');
+        return TimezoneService::getUserTimezone();
     }
 
     /**
@@ -152,17 +144,9 @@ class YouTubeUpdateScripts extends Page
             return 'N/A';
         }
 
-        $tz = $this->getUserTimezone();
-        $converted = $dateTime->copy()->setTimezone($tz);
-        $formatted = $converted->format($format);
-
-        if ($includeTzName) {
-            $tzName = $converted->format('T');
-
-            return "{$formatted} {$tzName}";
-        }
-
-        return $formatted;
+        return $includeTzName
+            ? TimezoneService::formatDateTime($dateTime, "{$format} T")
+            : TimezoneService::format($dateTime, $format);
     }
 
     /**

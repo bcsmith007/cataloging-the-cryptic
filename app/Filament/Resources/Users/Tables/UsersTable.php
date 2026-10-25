@@ -39,6 +39,13 @@ class UsersTable
                     ->boolean()
                     ->sortable(),
 
+                TextColumn::make('timezone')
+                    ->label('Timezone')
+                    ->badge()
+                    ->color('gray')
+                    ->sortable()
+                    ->searchable(),
+
                 TextColumn::make('created_at')
                     ->label('Registered')
                     ->dateTime('M j, Y H:i')

@@ -160,7 +160,7 @@
                                             <span class="text-slate-500 truncate max-w-[200px]">{{ $setter->first_video->title }}</span>
                                             <span class="text-slate-600">&bull;</span>
                                             <span class="font-mono text-slate-500 text-[11px] whitespace-nowrap">
-                                                {{ $setter->first_date?->format('M j, Y') }}
+                                                @userDate($setter->first_date)
                                             </span>
                                         </div>
                                     </a>
@@ -180,7 +180,7 @@
                                             <span class="text-slate-500 truncate max-w-[200px]">{{ $setter->recent_video->title }}</span>
                                             <span class="text-slate-600">&bull;</span>
                                             <span class="font-mono text-slate-500 text-[11px] whitespace-nowrap">
-                                                {{ $setter->recent_date?->format('M j, Y') }}
+                                                @userDate($setter->recent_date)
                                             </span>
                                         </div>
                                     </a>

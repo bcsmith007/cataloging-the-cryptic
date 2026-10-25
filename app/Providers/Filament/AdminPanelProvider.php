@@ -2,8 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\EditProfile;
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Pages\Dashboard;
+use App\Services\TimezoneService;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -11,6 +13,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Tables\Columns\TextColumn;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Contracts\View\View;
@@ -28,6 +31,16 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 class AdminPanelProvider extends PanelProvider
 {
     /**
+     * Bootstrap any panel services.
+     */
+    public function boot(): void
+    {
+        TextColumn::configureUsing(function (TextColumn $column): void {
+            $column->timezone(fn () => TimezoneService::getUserTimezone());
+        });
+    }
+
+    /**
      * Build and configure the panel instance.
      */
     public function panel(Panel $panel): Panel
@@ -38,7 +51,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login(Login::class)
             ->registration()
-            ->profile()
+            ->profile(EditProfile::class)
             ->topbar(false)
             ->colors([
                 'primary' => Color::Amber,
