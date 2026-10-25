@@ -183,9 +183,9 @@ class AppsPageTest extends TestCase
     }
 
     /**
-     * Test the dashboard widget renders on the admin panel for authenticated users.
+     * Test that the admin dashboard does not render the cluttering apps management widget.
      */
-    public function test_admin_dashboard_renders_apps_management_widget(): void
+    public function test_admin_dashboard_does_not_render_apps_management_widget(): void
     {
         $admin = User::factory()->create();
         CtcApp::factory()->create(['name' => 'Widget Test App']);
@@ -193,8 +193,7 @@ class AppsPageTest extends TestCase
         $response = $this->actingAs($admin)->get('/admin');
 
         $response->assertOk();
-        $response->assertSee('Cracking the Cryptic Apps Management');
-        $response->assertSee('Widget Test App');
-        $response->assertSee(route('filament.admin.resources.ctc-apps.create'));
+        $response->assertDontSee('Cracking the Cryptic Apps Management');
+        $response->assertDontSee('Manage All Apps');
     }
 }
