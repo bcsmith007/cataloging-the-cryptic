@@ -389,4 +389,31 @@ class BookmarkPlayerPageTest extends TestCase
         $this->assertNotEmpty($bookmarks);
         $this->assertEquals('3:45', $bookmarks[0]['timestamp_seconds']);
     }
+
+    /**
+     * Test that the bookmark player renders YouTube keyboard controls and bookmarking shortcuts.
+     */
+    public function test_bookmark_player_renders_keyboard_shortcuts_and_controls(): void
+    {
+        $user = User::factory()->create();
+        $video = Video::create([
+            'youtube_video_id' => 'shortcutsVideo1',
+            'title' => 'Shortcuts Video Test',
+            'video_type' => 'youtube',
+            'published_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get('/admin/bookmark-player?video='.$video->id);
+
+        $response->assertStatus(200);
+        $response->assertSee('Bookmark Capture Instructions');
+        $response->assertSee('Capture Workflow');
+        $response->assertSee('YouTube Keyboard Controls');
+        $response->assertSee('Space');
+        $response->assertSee('Rewind 10s');
+        $response->assertSee('Forward 10s');
+        $response->assertSee('Add Bookmark');
+        $response->assertDontSee('title="Toggle Play / Pause (Space / K)"');
+        $response->assertDontSee('title="Add bookmark (B)"');
+    }
 }

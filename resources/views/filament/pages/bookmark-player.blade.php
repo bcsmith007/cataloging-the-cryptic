@@ -1,4 +1,8 @@
 <x-filament-panels::page>
+    @push('styles')
+        @vite('resources/css/app.css')
+    @endpush
+
     <div
         x-data="videoBookmarkController({
             initialVideoId: @js($youtubeVideoId),
@@ -108,33 +112,66 @@
                     <span x-text="isPlaying ? 'Pause' : 'Play'">Play</span>
                 </button>
 
-                {{-- 2. -5s Rewind Button --}}
+                {{-- 2. -10s Rewind Button --}}
+                <button
+                    type="button"
+                    @click="seekRelative(-10)"
+                    class="yt-control-btn group rounded-lg border border-slate-700/80 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-300 shadow-sm hover:border-slate-500 hover:bg-slate-700 hover:text-white transition-all transform active:scale-95 cursor-pointer"
+                    title="Rewind 10 seconds"
+                >
+                    <svg width="16" height="16" class="yt-control-icon text-slate-400 group-hover:text-amber-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
+                    </svg>
+                    <span>-10s</span>
+                </button>
+
+                {{-- 3. -5s Rewind Button --}}
                 <button
                     type="button"
                     @click="seekRelative(-5)"
                     class="yt-control-btn group rounded-lg border border-slate-700/80 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-300 shadow-sm hover:border-slate-500 hover:bg-slate-700 hover:text-white transition-all transform active:scale-95 cursor-pointer"
                     title="Rewind 5 seconds"
                 >
-                    <svg width="16" height="16" class="yt-control-icon text-slate-400 group-hover:text-amber-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z" />
-                    </svg>
                     <span>-5s</span>
                 </button>
 
-                {{-- 3. +5s Forward Button --}}
+                {{-- 4. +5s Forward Button --}}
                 <button
                     type="button"
                     @click="seekRelative(5)"
                     class="yt-control-btn group rounded-lg border border-slate-700/80 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-300 shadow-sm hover:border-slate-500 hover:bg-slate-700 hover:text-white transition-all transform active:scale-95 cursor-pointer"
                     title="Fast-forward 5 seconds"
                 >
-                    <svg width="16" height="16" class="yt-control-icon text-slate-400 group-hover:text-amber-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
-                    </svg>
                     <span>+5s</span>
                 </button>
 
-                {{-- 4. Time: x:xx/y:yy Display Button --}}
+                {{-- 5. +10s Forward Button --}}
+                <button
+                    type="button"
+                    @click="seekRelative(10)"
+                    class="yt-control-btn group rounded-lg border border-slate-700/80 bg-slate-800 px-2.5 py-1.5 text-xs font-semibold text-slate-300 shadow-sm hover:border-slate-500 hover:bg-slate-700 hover:text-white transition-all transform active:scale-95 cursor-pointer"
+                    title="Fast-forward 10 seconds"
+                >
+                    <svg width="16" height="16" class="yt-control-icon text-slate-400 group-hover:text-amber-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 005 8v8a1 1 0 001.6.8l5.334-4zM19.934 12.8a1 1 0 000-1.6l-5.334-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.334-4z" />
+                    </svg>
+                    <span>+10s</span>
+                </button>
+
+                {{-- 6. Add Bookmark Button --}}
+                <button
+                    type="button"
+                    @click="captureAndAddBookmark()"
+                    class="yt-control-btn group rounded-lg border border-emerald-500/40 bg-emerald-950/60 px-3 py-1.5 text-xs font-semibold text-emerald-300 shadow-sm hover:border-emerald-400 hover:bg-emerald-900/80 hover:text-white transition-all transform active:scale-95 cursor-pointer"
+                    title="Add bookmark at current playback time"
+                >
+                    <svg width="16" height="16" class="yt-control-icon text-emerald-400 group-hover:text-white transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    <span>Add Bookmark</span>
+                </button>
+
+                {{-- 7. Time: x:xx/y:yy Display Button --}}
                 <button
                     type="button"
                     @click="copyCurrentTime()"
@@ -203,18 +240,241 @@
                 .bookmark-repeater .bookmark-add-btn:hover {
                     transform: translateY(-1px);
                 }
+
+                /* Stats-style instructions & shortcut tiles fallback for Filament */
+                .stats-tiles-grid {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 1.5rem;
+                }
+                @media (min-width: 1024px) {
+                    .stats-tiles-grid {
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                    }
+                }
+                .stats-tile-card {
+                    background-color: rgba(15, 23, 42, 0.75);
+                    border: 1px solid #1e293b;
+                    border-radius: 1rem;
+                    padding: 1.5rem;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+                }
+                .stats-step-row {
+                    background-color: rgba(2, 6, 23, 0.6);
+                    border: 1px solid rgba(30, 41, 59, 0.8);
+                    border-radius: 0.75rem;
+                    padding: 0.875rem;
+                }
+                .stats-shortcut-row {
+                    background-color: rgba(2, 6, 23, 0.6);
+                    border: 1px solid rgba(30, 41, 59, 0.8);
+                    border-radius: 0.75rem;
+                    padding: 0.75rem;
+                }
             </style>
             {{ $this->form }}
         </div>
 
-        {{-- Explanatory guide card --}}
-        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-xs text-slate-400 space-y-2">
-            <div class="font-semibold text-slate-300">How real-time timestamp capture works:</div>
-            <ul class="list-disc list-inside space-y-1">
-                <li><strong class="text-slate-200">Clicking the (+) button</strong> adds a new bookmark at the current playback timestamp at the top of the list.</li>
-                <li><strong class="text-slate-200">Clicking the play button next to any timestamp</strong> seeks the video directly to that bookmark.</li>
-                <li><strong class="text-slate-200">Save Bookmarks button</strong> saves your changes directly to the selected video in the database.</li>
-            </ul>
+        {{-- Two-Column Grid: Instructions Tile & Keyboard Shortcuts Tile (Stats-Page Aesthetic) --}}
+        <div class="stats-tiles-grid grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {{-- Tile 1: Bookmark Capture Instructions --}}
+            <div class="stats-tile-card bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6 flex flex-col justify-between relative overflow-hidden group hover:border-slate-700/80 transition-colors">
+                <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-emerald-500/10 transition-colors"></div>
+
+                <div class="space-y-5">
+                    {{-- Tile Header --}}
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800/80 pb-4">
+                        <div>
+                            <div class="flex items-center gap-2.5">
+                                <h3 class="text-lg font-bold text-white tracking-tight">
+                                    Bookmark Capture Instructions
+                                </h3>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">
+                                Step-by-step timestamp capture workflow for tagging and categorizing solve moments.
+                            </p>
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono shrink-0">
+                            Capture Workflow
+                        </span>
+                    </div>
+
+                    {{-- Instruction Steps with Colors & Bold Headers --}}
+                    <div class="space-y-3">
+                        {{-- Step 1 --}}
+                        <div class="stats-step-row p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-start gap-3.5 hover:border-emerald-500/30 transition-colors">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-xs font-mono font-bold text-emerald-400 border border-emerald-500/30">
+                                1
+                            </span>
+                            <div class="text-xs space-y-1">
+                                <div class="font-bold text-white tracking-tight flex items-center gap-2">
+                                    <span>Capture Playback Timecode</span>
+                                    <span class="text-[10px] font-mono text-emerald-400 font-semibold uppercase tracking-wider bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-500/30">Key: B</span>
+                                </div>
+                                <p class="text-slate-300 leading-relaxed">
+                                    Press <kbd class="px-1.5 py-0.5 rounded bg-slate-900 border border-emerald-500/40 text-emerald-400 font-mono text-[11px] font-bold">B</kbd> or click <strong class="text-emerald-400 font-semibold">Add Bookmark</strong> to instantly grab the current time and prepend a new entry to the list.
+                                </p>
+                            </div>
+                        </div>
+
+                        {{-- Step 2 --}}
+                        <div class="stats-step-row p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-start gap-3.5 hover:border-sky-500/30 transition-colors">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/10 text-xs font-mono font-bold text-sky-400 border border-sky-500/30">
+                                2
+                            </span>
+                            <div class="text-xs space-y-1">
+                                <div class="font-bold text-white tracking-tight flex items-center gap-2">
+                                    <span>Assign Label &amp; Link Puzzle</span>
+                                    <span class="text-[10px] font-mono text-sky-400 font-semibold uppercase tracking-wider bg-sky-950/60 px-1.5 py-0.5 rounded border border-sky-500/30">Categorize</span>
+                                </div>
+                                <p class="text-slate-300 leading-relaxed">
+                                    Select a standard label like <strong class="text-sky-300 font-semibold">Rules</strong>, <strong class="text-sky-300 font-semibold">Solution</strong>, or <strong class="text-sky-300 font-semibold">Puzzle Solve</strong>, or type custom text. Link to an indexed puzzle if applicable.
+                                </p>
+                            </div>
+                        </div>
+
+                        {{-- Step 3 --}}
+                        <div class="stats-step-row p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-start gap-3.5 hover:border-purple-500/30 transition-colors">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-xs font-mono font-bold text-purple-400 border border-purple-500/30">
+                                3
+                            </span>
+                            <div class="text-xs space-y-1">
+                                <div class="font-bold text-white tracking-tight flex items-center gap-2">
+                                    <span>Seek &amp; Verify Accuracy</span>
+                                    <span class="text-[10px] font-mono text-purple-400 font-semibold uppercase tracking-wider bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-500/30">Instant Jump</span>
+                                </div>
+                                <p class="text-slate-300 leading-relaxed">
+                                    Click the <strong class="text-purple-300 font-semibold">play icon</strong> next to any timestamp to seek the video player immediately to that exact second and verify the moment.
+                                </p>
+                            </div>
+                        </div>
+
+                        {{-- Step 4 --}}
+                        <div class="stats-step-row p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-start gap-3.5 hover:border-amber-500/30 transition-colors">
+                            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-xs font-mono font-bold text-amber-400 border border-amber-500/30">
+                                4
+                            </span>
+                            <div class="text-xs space-y-1">
+                                <div class="font-bold text-white tracking-tight flex items-center gap-2">
+                                    <span>Save &amp; Auto-Sort Bookmarks</span>
+                                    <span class="text-[10px] font-mono text-amber-400 font-semibold uppercase tracking-wider bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30">Publish</span>
+                                </div>
+                                <p class="text-slate-300 leading-relaxed">
+                                    Click <strong class="text-amber-300 font-semibold">Save Bookmarks</strong>. All entries are validated, chronologically sorted, and stored for catalog visitors.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Stats-Style Takeaway / Observation Box --}}
+                <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-400 flex items-start gap-2.5 mt-2">
+                    <div class="w-2 h-2 rounded-full bg-emerald-400 mt-1 shrink-0"></div>
+                    <div>
+                        <strong class="text-slate-200 font-semibold">Chronological Sorting:</strong>
+                        <span class="text-slate-300">You can add bookmarks in any order while watching. When saved, all timecodes are automatically rearranged in chronological order.</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Tile 2: YouTube Keyboard Controls --}}
+            <div class="stats-tile-card bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6 flex flex-col justify-between relative overflow-hidden group hover:border-slate-700/80 transition-colors">
+                <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-sky-500/5 rounded-full blur-2xl pointer-events-none group-hover:bg-sky-500/10 transition-colors"></div>
+
+                <div class="space-y-5">
+                    {{-- Tile Header --}}
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800/80 pb-4">
+                        <div>
+                            <div class="flex items-center gap-2.5">
+                                <h3 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                                    YouTube Keyboard Controls
+                                </h3>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1">
+                                Natural playback shortcuts matching official YouTube desktop controls.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 font-mono">
+                                <span class="h-2 w-2 rounded-full bg-sky-400 animate-pulse"></span>
+                                <span>Shortcuts Active</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    {{-- Shortcut Grid with Colored Text & Bold Headers --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        {{-- Play / Pause --}}
+                        <div class="stats-shortcut-row p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white tracking-tight">Play / Pause</div>
+                                <div class="text-[11px] text-slate-400 mt-0.5">Toggle video playback</div>
+                            </div>
+                            <div class="flex items-center gap-1 font-mono shrink-0">
+                                <kbd class="px-2 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-200 text-xs font-semibold shadow-sm">Space</kbd>
+                                <span class="text-slate-500 text-xs">/</span>
+                                <kbd class="px-2 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-200 text-xs font-semibold shadow-sm">K</kbd>
+                            </div>
+                        </div>
+
+                        {{-- Add Bookmark --}}
+                        <div class="stats-shortcut-row p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/40 hover:border-emerald-500/60 transition-colors flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-emerald-300 tracking-tight">Add Bookmark</div>
+                                <div class="text-[11px] text-emerald-400/80 mt-0.5">Capture current time</div>
+                            </div>
+                            <kbd class="px-2.5 py-1 rounded-md bg-slate-950 border border-emerald-500/50 text-emerald-400 text-xs font-mono font-bold shadow-sm">B</kbd>
+                        </div>
+
+                        {{-- Rewind 10s --}}
+                        <div class="stats-shortcut-row p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white tracking-tight">Rewind 10s</div>
+                                <div class="text-[11px] text-amber-400 font-mono mt-0.5">-10 seconds</div>
+                            </div>
+                            <kbd class="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-200 text-xs font-mono font-semibold shadow-sm">J</kbd>
+                        </div>
+
+                        {{-- Forward 10s --}}
+                        <div class="stats-shortcut-row p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white tracking-tight">Forward 10s</div>
+                                <div class="text-[11px] text-amber-400 font-mono mt-0.5">+10 seconds</div>
+                            </div>
+                            <kbd class="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-200 text-xs font-mono font-semibold shadow-sm">L</kbd>
+                        </div>
+
+                        {{-- Rewind 5s --}}
+                        <div class="stats-shortcut-row p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white tracking-tight">Rewind 5s</div>
+                                <div class="text-[11px] text-slate-400 font-mono mt-0.5">-5 seconds</div>
+                            </div>
+                            <kbd class="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-200 text-xs font-mono font-semibold shadow-sm">←</kbd>
+                        </div>
+
+                        {{-- Forward 5s --}}
+                        <div class="stats-shortcut-row p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white tracking-tight">Forward 5s</div>
+                                <div class="text-[11px] text-slate-400 font-mono mt-0.5">+5 seconds</div>
+                            </div>
+                            <kbd class="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-700 text-slate-200 text-xs font-mono font-semibold shadow-sm">→</kbd>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Stats-Style Takeaway / Observation Box --}}
+                <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-400 flex items-start gap-2.5 mt-2">
+                    <div class="w-2 h-2 rounded-full bg-sky-400 mt-1 shrink-0"></div>
+                    <div>
+                        <strong class="text-slate-200 font-semibold">Non-Intrusive Input:</strong>
+                        <span class="text-slate-300">All keyboard shortcuts are automatically suspended when typing in any input, select menu, or notes field so you can type freely.</span>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -325,6 +585,71 @@
                             }
                         }, true);
 
+                        // Setup YouTube-style keyboard shortcuts (J, K, L, Space) and B for bookmarking
+                        window.addEventListener('keydown', (event) => {
+                            // 1. Never intercept when user is typing in inputs, textareas, selects, or contenteditable elements
+                            const target = event.target;
+                            if (target) {
+                                const tagName = target.tagName ? target.tagName.toLowerCase() : '';
+                                if (
+                                    tagName === 'input' ||
+                                    tagName === 'textarea' ||
+                                    tagName === 'select' ||
+                                    target.isContentEditable ||
+                                    (typeof target.closest === 'function' && target.closest('input, textarea, select, [contenteditable="true"]'))
+                                ) {
+                                    return;
+                                }
+                            }
+
+                            // 2. Ignore shortcut if Ctrl, Alt, or Meta (Cmd) modifier keys are pressed
+                            if (event.ctrlKey || event.metaKey || event.altKey) {
+                                return;
+                            }
+
+                            const key = event.key ? event.key.toLowerCase() : '';
+
+                            // Play / Pause: Space or K
+                            if (key === ' ' || event.code === 'Space' || key === 'k') {
+                                event.preventDefault();
+                                self.togglePlay();
+                                return;
+                            }
+
+                            // Rewind 10s: J
+                            if (key === 'j') {
+                                event.preventDefault();
+                                self.seekRelative(-10);
+                                return;
+                            }
+
+                            // Fast-forward 10s: L
+                            if (key === 'l') {
+                                event.preventDefault();
+                                self.seekRelative(10);
+                                return;
+                            }
+
+                            // Seek 5s with arrow keys: Left / Right
+                            if (key === 'arrowleft') {
+                                event.preventDefault();
+                                self.seekRelative(-5);
+                                return;
+                            }
+                            if (key === 'arrowright') {
+                                event.preventDefault();
+                                self.seekRelative(5);
+                                return;
+                            }
+
+                            // Add Bookmark at current time: B
+                            if (key === 'b') {
+                                event.preventDefault();
+                                self.captureAndAddBookmark();
+                                return;
+                            }
+                        });
+
                         // Set up MutationObserver to highlight newly inserted repeater rows
                         this.setupRepeaterObserver();
 
@@ -412,18 +737,35 @@
 
                     togglePlay() {
                         if (!this.player) return;
-                        if (this.isPlaying) {
-                            this.player.pauseVideo();
-                        } else {
-                            this.player.playVideo();
+                        try {
+                            const state = (typeof this.player.getPlayerState === 'function') ? this.player.getPlayerState() : null;
+                            if (state === 1 || this.isPlaying) {
+                                this.player.pauseVideo();
+                                this.isPlaying = false;
+                            } else {
+                                this.player.playVideo();
+                                this.isPlaying = true;
+                            }
+                        } catch (e) {
+                            if (this.isPlaying) {
+                                this.player.pauseVideo();
+                                this.isPlaying = false;
+                            } else {
+                                this.player.playVideo();
+                                this.isPlaying = true;
+                            }
                         }
                     },
 
                     seekRelative(deltaSeconds) {
                         if (!this.player) return;
-                        const newTime = Math.max(0, (this.player.getCurrentTime() || 0) + deltaSeconds);
-                        this.player.seekTo(newTime, true);
-                        this.updateCurrentTime();
+                        try {
+                            const current = (typeof this.player.getCurrentTime === 'function' ? this.player.getCurrentTime() : this.currentTime) || 0;
+                            const newTime = Math.max(0, current + deltaSeconds);
+                            this.player.seekTo(newTime, true);
+                            this.currentTime = newTime;
+                            this.updateCurrentTime();
+                        } catch (e) {}
                     },
 
                     seekTo(timecode) {
