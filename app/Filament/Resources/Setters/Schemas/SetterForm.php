@@ -7,9 +7,9 @@ use App\Models\LinkType;
 use App\Models\Setter;
 use App\Models\SetterLink;
 use Filament\Actions\Action;
+use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -61,9 +61,21 @@ class SetterForm
                     ->unique(ignoreRecord: true),
             ]),
 
-            Textarea::make('bio')
+            MarkdownEditor::make('bio')
                 ->label('Biography / Notes')
-                ->rows(3),
+                ->toolbarButtons([
+                    'bold',
+                    'italic',
+                    'strike',
+                    'link',
+                    'heading',
+                    'blockquote',
+                    'bulletList',
+                    'orderedList',
+                    'table',
+                    'undo',
+                    'redo',
+                ]),
         ];
 
         if ($withRelationships) {

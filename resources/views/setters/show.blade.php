@@ -50,8 +50,8 @@
 
                     {{-- Bio Section --}}
                     @if ($setter->bio)
-                        <div class="text-sm text-slate-300 leading-relaxed max-w-3xl pt-1">
-                            {!! nl2br(e($setter->bio)) !!}
+                        <div class="ctc-markdown-content text-sm text-slate-300 leading-relaxed max-w-3xl pt-1">
+                            {!! Str::markdown($setter->bio) !!}
                         </div>
                     @else
                         <p class="text-sm text-slate-500 italic max-w-2xl pt-1">

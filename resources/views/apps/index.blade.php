@@ -133,9 +133,9 @@
                     @endif
 
                     @if (filled($app->description))
-                        <p class="text-xs text-slate-300 leading-relaxed">
-                            {{ $app->description }}
-                        </p>
+                        <div class="ctc-markdown-content text-xs text-slate-300 leading-relaxed">
+                            {!! Str::markdown($app->description) !!}
+                        </div>
                     @endif
                 </div>
 

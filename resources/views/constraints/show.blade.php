@@ -48,8 +48,8 @@
                             Rule Definition
                         </div>
                         @if ($constraint->description)
-                            <div class="text-sm text-slate-300 leading-relaxed max-w-3xl">
-                                {!! nl2br(e($constraint->description)) !!}
+                            <div class="ctc-markdown-content text-sm text-slate-300 leading-relaxed max-w-3xl">
+                                {!! Str::markdown($constraint->description) !!}
                             </div>
                         @else
                             <p class="text-sm text-slate-500 italic max-w-2xl">

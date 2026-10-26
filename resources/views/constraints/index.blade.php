@@ -133,7 +133,7 @@
                     @forelse ($constraints as $constraint)
                         <tr class="constraint-row hover:bg-slate-800/40 transition-colors group"
                             data-name="{{ strtolower($constraint->name) }}"
-                            data-description="{{ strtolower($constraint->description ?? '') }}"
+                            data-description="{{ strtolower(strip_tags(Str::markdown($constraint->description ?? ''))) }}"
                             data-videos="{{ $constraint->videos_count }}"
                             data-puzzles="{{ $constraint->puzzles_count }}"
                             data-first="{{ $constraint->first_date?->timestamp ?? 0 }}"
@@ -147,7 +147,7 @@
                                     </a>
                                     @if ($constraint->description)
                                         <p class="text-xs text-slate-400 line-clamp-2 mt-1 leading-relaxed">
-                                            {{ $constraint->description }}
+                                            {{ strip_tags(Str::markdown($constraint->description)) }}
                                         </p>
                                     @else
                                         <p class="text-xs text-slate-500 italic mt-1">

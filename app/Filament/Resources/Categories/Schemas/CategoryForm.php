@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Categories\Schemas;
 
 use App\Models\Category;
-use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -55,9 +55,21 @@ class CategoryForm
                     ->unique(ignoreRecord: true),
             ]),
 
-            Textarea::make('description')
+            MarkdownEditor::make('description')
                 ->label('Description')
-                ->rows(4),
+                ->toolbarButtons([
+                    'bold',
+                    'italic',
+                    'strike',
+                    'link',
+                    'heading',
+                    'blockquote',
+                    'bulletList',
+                    'orderedList',
+                    'table',
+                    'undo',
+                    'redo',
+                ]),
         ];
     }
 }

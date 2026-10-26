@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\CtcApps\Schemas;
 
 use App\Models\CtcApp;
-use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
@@ -57,11 +57,23 @@ class CtcAppForm
                             ->columnSpanFull()
                             ->placeholder('A brief catchy description of the puzzle mechanics.'),
 
-                        Textarea::make('description')
+                        MarkdownEditor::make('description')
                             ->label('Description')
-                            ->rows(4)
                             ->columnSpanFull()
-                            ->placeholder('Detailed information about the app, puzzle authors, and included features.'),
+                            ->placeholder('Detailed information about the app, puzzle authors, and included features.')
+                            ->toolbarButtons([
+                                'bold',
+                                'italic',
+                                'strike',
+                                'link',
+                                'heading',
+                                'blockquote',
+                                'bulletList',
+                                'orderedList',
+                                'table',
+                                'undo',
+                                'redo',
+                            ]),
 
                         TextInput::make('thumbnail_url')
                             ->label('Thumbnail / Icon URL')

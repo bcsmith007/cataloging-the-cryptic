@@ -249,4 +249,23 @@ class SetterCatalogTest extends TestCase
         $response = $this->get('/setters/non-existent-setter-xyz');
         $response->assertStatus(404);
     }
+
+    /**
+     * Test that setter bio with markdown renders formatted HTML.
+     */
+    public function test_setter_show_renders_formatted_markdown_bio(): void
+    {
+        $setter = Setter::factory()->create([
+            'name' => 'Markdown Author',
+            'slug' => 'markdown-author',
+            'bio' => "Notable setter known for:\n\n* **Thermosudoku**\n* Miracle sudoku variations",
+        ]);
+
+        $response = $this->get(route('setters.show', $setter->slug));
+        $response->assertStatus(200);
+
+        $response->assertSee('ctc-markdown-content', false);
+        $response->assertSee('<strong>Thermosudoku</strong>', false);
+        $response->assertSee('<li>', false);
+    }
 }

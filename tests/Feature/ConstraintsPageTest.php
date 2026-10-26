@@ -261,4 +261,28 @@ class ConstraintsPageTest extends TestCase
         $this->assertTrue($cPosArrow < $cPosWhispers, 'Arrow must appear before German Whispers on constraint video card');
         $this->assertTrue($cPosWhispers < $cPosKropki, 'German Whispers must appear before Kropki on constraint video card');
     }
+
+    /**
+     * Test that constraint definition with markdown renders formatted HTML including lists and bold text.
+     */
+    public function test_constraint_detail_renders_formatted_markdown_description(): void
+    {
+        $markdown = "Rules of this variant:\n\n* **Adjacent digits** must differ by at least 5.\n* Lines do not loop.\n\nEnjoy the puzzle!";
+
+        $constraint = Constraint::factory()->create([
+            'name' => 'Whispers Ruleset',
+            'slug' => 'whispers-ruleset',
+            'description' => $markdown,
+        ]);
+
+        $response = $this->get(route('constraints.show', $constraint->slug));
+        $response->assertStatus(200);
+
+        // Assert markdown content container and converted HTML elements
+        $response->assertSee('ctc-markdown-content', false);
+        $response->assertSee('<strong>Adjacent digits</strong>', false);
+        $response->assertSee('<ul>', false);
+        $response->assertSee('<li>', false);
+        $response->assertSee('Lines do not loop.');
+    }
 }

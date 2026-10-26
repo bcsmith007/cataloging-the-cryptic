@@ -196,4 +196,23 @@ class AppsPageTest extends TestCase
         $response->assertDontSee('Cracking the Cryptic Apps Management');
         $response->assertDontSee('Manage All Apps');
     }
+
+    /**
+     * Test that the apps index page renders formatted markdown descriptions.
+     */
+    public function test_apps_page_renders_markdown_description(): void
+    {
+        CtcApp::factory()->create([
+            'name' => 'Markdown Puzzle App',
+            'is_active' => true,
+            'description' => "Features include:\n\n* **100+ handcrafted puzzles**\n* Hint system",
+        ]);
+
+        $response = $this->get(route('apps.index'));
+        $response->assertOk();
+
+        $response->assertSee('ctc-markdown-content', false);
+        $response->assertSee('<strong>100+ handcrafted puzzles</strong>', false);
+        $response->assertSee('<li>', false);
+    }
 }
