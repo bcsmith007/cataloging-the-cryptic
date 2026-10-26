@@ -14,6 +14,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 /**
  * Form schema configuration for Setter resource.
@@ -75,7 +76,8 @@ class SetterForm
                     'table',
                     'undo',
                     'redo',
-                ]),
+                ])
+                ->helperText(new HtmlString('Supports bullet lists, bold, italics, and arrows. <a href="/markdown" target="_blank" class="text-primary-500 hover:underline font-semibold">View Markdown Guide &rarr;</a>')),
         ];
 
         if ($withRelationships) {

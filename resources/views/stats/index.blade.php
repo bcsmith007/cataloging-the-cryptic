@@ -340,12 +340,12 @@
         </div>
     </div>
 
-    {{-- Main Section: Uploads by Puzzle Category --}}
+    {{-- Main Section: Puzzles by Category --}}
     <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-4">
             <div>
                 <h3 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                    Total Uploads by Puzzle Category
+                    Total Puzzles by Category
                 </h3>
                 <p class="text-xs text-slate-400 mt-1">
                     Multi-puzzle videos count each attached puzzle individually as of that video's date. Videos pending puzzle indexing are grouped as Unclassified.
@@ -395,7 +395,7 @@
                 <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
                     <div>
                         <div class="font-bold text-slate-200 truncate" title="{{ $cat['name'] }}">{{ $cat['name'] }}</div>
-                        <div class="text-slate-400 mt-1 font-mono">{{ number_format($cat['count']) }} uploads</div>
+                        <div class="text-slate-400 mt-1 font-mono">{{ number_format($cat['count']) }} {{ Str::plural('puzzle', $cat['count']) }}</div>
                         @if (!$cat['is_unclassified'])
                             <div class="text-slate-400 font-mono text-[11px]">{{ $cat['distinct_videos'] }} videos</div>
                         @endif
@@ -1112,11 +1112,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                 label: function (ctx) {
                                     const val = ctx.raw || 0;
                                     if (val <= 0) return null;
-                                    return ' ' + ctx.dataset.label + ': ' + val.toLocaleString() + ' uploads';
+                                    return ' ' + ctx.dataset.label + ': ' + val.toLocaleString() + ' puzzles';
                                 },
                                 footer: function (items) {
                                     const total = items.reduce((sum, item) => sum + (item.raw || 0), 0);
-                                    return total > 0 ? ' Total: ' + total.toLocaleString() + ' uploads' : '';
+                                    return total > 0 ? ' Total: ' + total.toLocaleString() + ' puzzles' : '';
                                 }
                             }
                         }
@@ -1132,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         y: {
                             stacked: true,
                             grid: { color: 'rgba(51, 65, 85, 0.25)' },
-                            title: { display: true, text: 'Uploads as of Video Date', color: '#94a3b8', font: { size: 11 } },
+                            title: { display: true, text: 'Puzzles as of Video Date', color: '#94a3b8', font: { size: 11 } },
                             ticks: { font: { size: 10 } }
                         }
                     }
@@ -1195,11 +1195,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                 label: function (ctx) {
                                     const val = ctx.raw || 0;
                                     if (val <= 0) return null;
-                                    return ' ' + ctx.dataset.label + ': ' + val.toLocaleString() + ' uploads';
+                                    return ' ' + ctx.dataset.label + ': ' + val.toLocaleString() + ' puzzles';
                                 },
                                 footer: function (items) {
                                     const total = items.reduce((sum, item) => sum + (item.raw || 0), 0);
-                                    return total > 0 ? ' Total: ' + total.toLocaleString() + ' uploads' : '';
+                                    return total > 0 ? ' Total: ' + total.toLocaleString() + ' puzzles' : '';
                                 }
                             }
                         }
@@ -1212,7 +1212,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         y: {
                             stacked: true,
                             grid: { color: 'rgba(51, 65, 85, 0.25)' },
-                            title: { display: true, text: 'Uploads as of Video Date', color: '#94a3b8', font: { size: 11 } },
+                            title: { display: true, text: 'Puzzles as of Video Date', color: '#94a3b8', font: { size: 11 } },
                             ticks: { font: { size: 10 } }
                         }
                     }
@@ -1233,7 +1233,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Uploads',
+                        label: 'Puzzles',
                         data: counts,
                         backgroundColor: bgColors,
                         borderColor: bgColors,
@@ -1261,7 +1261,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     const videosText = item.is_unclassified
                                         ? ''
                                         : ' (' + item.distinct_videos.toLocaleString() + ' distinct videos)';
-                                    return ' ' + val.toLocaleString() + ' uploads' + videosText;
+                                    return ' ' + val.toLocaleString() + ' puzzles' + videosText;
                                 }
                             }
                         }
@@ -1276,7 +1276,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         },
                         y: {
                             grid: { color: 'rgba(51, 65, 85, 0.25)' },
-                            title: { display: true, text: 'Total Uploads', color: '#94a3b8', font: { size: 11 } },
+                            title: { display: true, text: 'Total Puzzles', color: '#94a3b8', font: { size: 11 } },
                             ticks: {
                                 font: { size: 10 },
                                 callback: val => (val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val)

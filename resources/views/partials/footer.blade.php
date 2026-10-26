@@ -13,6 +13,7 @@
             <a href="{{ route('videos.random') }}" class="text-slate-400 hover:text-white transition-colors">Random</a>
             <a href="{{ route('search') }}" class="text-slate-400 hover:text-white transition-colors">Search</a>
             <a href="{{ route('privacy') }}" class="text-slate-400 hover:text-white transition-colors">Privacy Policy</a>
+            <a href="{{ route('markdown.guide') }}" class="text-slate-400 hover:text-white transition-colors">Markdown Guide</a>
             @auth
                 <a href="{{ url('/admin') }}" class="text-slate-400 hover:text-white transition-colors">Admin Panel</a>
                 <a href="{{ filament()->getProfileUrl() ?? url('/admin/profile') }}" class="text-slate-400 hover:text-white transition-colors">Profile</a>

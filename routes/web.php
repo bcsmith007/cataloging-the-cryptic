@@ -31,6 +31,7 @@ Route::get('/constraints/{constraint}', [ConstraintController::class, 'show'])->
 Route::get('/contraints', fn () => redirect()->route('constraints.index', [], 301));
 Route::get('/contraints/{constraint}', fn ($constraint) => redirect()->route('constraints.show', ['constraint' => $constraint], 301));
 Route::view('/privacy', 'privacy')->name('privacy');
+Route::view('/markdown', 'markdown.index')->name('markdown.guide');
 Route::get('/bookmark-player', function (Request $request) {
     $queryString = $request->getQueryString();
 

@@ -56,7 +56,7 @@ class CatalogStatsTest extends TestCase
         $response->assertSee('Publishing Cadence & Day-of-Week Performance', false);
         $response->assertSee('Most Viewed Video');
         $response->assertSee('Channel Peak Months');
-        $response->assertSee('Total Uploads by Puzzle Category');
+        $response->assertSee('Total Puzzles by Category');
         $response->assertSee('Unclassified');
         $response->assertSee('Standard Solves');
         $response->assertSee('YouTube Shorts');

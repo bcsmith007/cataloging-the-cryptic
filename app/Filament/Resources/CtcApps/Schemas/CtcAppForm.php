@@ -9,6 +9,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 class CtcAppForm
 {
@@ -73,7 +74,8 @@ class CtcAppForm
                                 'table',
                                 'undo',
                                 'redo',
-                            ]),
+                            ])
+                            ->helperText(new HtmlString('Supports bullet lists, bold, italics, and arrows. <a href="/markdown" target="_blank" class="text-primary-500 hover:underline font-semibold">View Markdown Guide &rarr;</a>')),
 
                         TextInput::make('thumbnail_url')
                             ->label('Thumbnail / Icon URL')
