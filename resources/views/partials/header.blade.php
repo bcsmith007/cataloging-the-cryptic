@@ -13,10 +13,28 @@
 
         {{-- Desktop Navigation (hidden on mobile, visible on desktop >= 1024px) --}}
         <nav class="ctc-desktop-nav flex items-center space-x-6 text-sm font-medium">
-            <a href="{{ route('videos.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('videos.index') ? 'text-emerald-400 font-semibold' : '' }}">Videos</a>
-            <a href="{{ route('videos.top') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('videos.top') ? 'text-emerald-400 font-semibold' : '' }}">Most Viewed</a>
-            <a href="{{ route('videos.longest') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('videos.longest') ? 'text-emerald-400 font-semibold' : '' }}">Longest</a>
-            <a href="{{ route('videos.shortest') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('videos.shortest') ? 'text-emerald-400 font-semibold' : '' }}">Shortest</a>
+            <div class="ctc-nav-dropdown group">
+                <a href="{{ route('videos.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors flex items-center gap-1 {{ request()->routeIs(['videos.index', 'videos.top', 'videos.longest', 'videos.shortest']) ? 'text-emerald-400 font-semibold' : '' }}" aria-haspopup="true" aria-expanded="false">
+                    <span>Videos</span>
+                    <svg class="ctc-nav-caret" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </a>
+                <div class="ctc-dropdown-menu" role="menu" aria-label="Videos menu">
+                    <a href="{{ route('videos.index') }}" class="ctc-dropdown-item {{ request()->routeIs('videos.index') ? 'active' : '' }}" role="menuitem">
+                        All Videos
+                    </a>
+                    <a href="{{ route('videos.top') }}" class="ctc-dropdown-item {{ request()->routeIs('videos.top') ? 'active' : '' }}" role="menuitem">
+                        Most Viewed
+                    </a>
+                    <a href="{{ route('videos.longest') }}" class="ctc-dropdown-item {{ request()->routeIs('videos.longest') ? 'active' : '' }}" role="menuitem">
+                        Longest
+                    </a>
+                    <a href="{{ route('videos.shortest') }}" class="ctc-dropdown-item {{ request()->routeIs('videos.shortest') ? 'active' : '' }}" role="menuitem">
+                        Shortest
+                    </a>
+                </div>
+            </div>
             <a href="{{ route('setters.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('setters*') ? 'text-emerald-400 font-semibold' : '' }}">Setters</a>
             <a href="{{ route('constraints.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('constraints*') ? 'text-emerald-400 font-semibold' : '' }}">Constraints</a>
             <a href="{{ route('apps.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('apps*') ? 'text-emerald-400 font-semibold' : '' }}">Apps</a>

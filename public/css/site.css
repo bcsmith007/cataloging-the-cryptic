@@ -251,6 +251,99 @@ body {
     display: block !important;
 }
 
+/* Downward caret icon next to Videos */
+.ctc-public-header .ctc-nav-link svg.ctc-nav-caret {
+    width: 12px !important;
+    height: 12px !important;
+    min-width: 12px !important;
+    min-height: 12px !important;
+    max-width: 12px !important;
+    max-height: 12px !important;
+    color: currentColor !important;
+    margin-left: 0.125rem;
+    transition: transform 0.2s ease;
+}
+
+.ctc-nav-dropdown:hover .ctc-nav-caret,
+.ctc-nav-dropdown:focus-within .ctc-nav-caret {
+    transform: rotate(180deg);
+}
+
+/* Videos Desktop Navigation Dropdown */
+.ctc-nav-dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+}
+
+.ctc-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.375rem);
+    left: 0;
+    z-index: 50;
+    min-width: 11rem;
+    padding: 0.375rem;
+    background-color: rgba(15, 23, 42, 0.98);
+    border: 1px solid #1e293b;
+    border-radius: 0.75rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+/* Invisible bridge so cursor moving down to the menu never breaks hover */
+.ctc-dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -0.625rem;
+    left: 0;
+    right: 0;
+    height: 0.625rem;
+}
+
+.ctc-nav-dropdown:hover .ctc-dropdown-menu,
+.ctc-nav-dropdown:focus-within .ctc-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.ctc-dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    text-decoration: none;
+    border-radius: 0.5rem;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.ctc-dropdown-item:hover,
+.ctc-dropdown-item:focus-visible {
+    color: #ffffff;
+    background-color: rgba(30, 41, 59, 0.8);
+}
+
+.ctc-dropdown-item.active {
+    color: #34d399;
+    background-color: rgba(16, 185, 129, 0.12);
+    font-weight: 600;
+}
+
+
 /* Public Footer */
 .ctc-public-footer {
     border-top: 1px solid #1e293b;

@@ -365,8 +365,15 @@ class LandingPageTest extends TestCase
 
         $response->assertStatus(200);
 
-        // Desktop nav container
+        // Desktop nav container & videos dropdown menu
         $response->assertSee('ctc-desktop-nav');
+        $response->assertSee('ctc-nav-dropdown');
+        $response->assertSee('ctc-nav-caret');
+        $response->assertSee('ctc-dropdown-menu');
+        $response->assertSee('All Videos');
+        $response->assertSee('Most Viewed');
+        $response->assertSee('Longest');
+        $response->assertSee('Shortest');
 
         // Mobile hamburger toggle button & accessible attributes
         $response->assertSee('id="ctc-mobile-menu-btn"', false);
