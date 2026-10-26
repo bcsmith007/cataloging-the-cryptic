@@ -469,6 +469,68 @@ body {
     color: #f1f5f9;
 }
 
+/* Markdown Excerpt / Preview */
+.ctc-markdown-preview {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 0.75rem !important;
+    line-height: 1.5 !important;
+    color: #94a3b8 !important;
+}
+
+.ctc-markdown-preview p,
+.ctc-markdown-preview ul,
+.ctc-markdown-preview ol,
+.ctc-markdown-preview li,
+.ctc-markdown-preview h1,
+.ctc-markdown-preview h2,
+.ctc-markdown-preview h3,
+.ctc-markdown-preview h4,
+.ctc-markdown-preview blockquote {
+    display: inline !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 0.75rem !important;
+    line-height: inherit !important;
+    font-weight: normal;
+}
+
+.ctc-markdown-preview strong,
+.ctc-markdown-preview b {
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+.ctc-markdown-preview h1::after,
+.ctc-markdown-preview h2::after,
+.ctc-markdown-preview h3::after,
+.ctc-markdown-preview h4::after {
+    content: " — ";
+}
+
+.ctc-markdown-preview p + p::before {
+    content: " ";
+}
+
+.ctc-markdown-preview li::after {
+    content: " • ";
+}
+
+.ctc-markdown-preview li:last-child::after {
+    content: "";
+}
+
+.ctc-markdown-preview .katex-display {
+    display: inline-block !important;
+    margin: 0 0.25rem !important;
+}
+
+.ctc-markdown-preview .katex {
+    font-size: 0.9em;
+}
+
 
 /* Public Footer */
 .ctc-public-footer {

@@ -285,4 +285,25 @@ class ConstraintsPageTest extends TestCase
         $response->assertSee('<li>', false);
         $response->assertSee('Lines do not loop.');
     }
+
+    /**
+     * Test that the constraints index table renders rich markdown and math preview.
+     */
+    public function test_constraints_index_renders_live_markdown_and_math_preview(): void
+    {
+        $markdown = "Normal Sudoku rules apply. Adjacent digits along green lines differ by at least 5 ($|a - b| \ge 5$).";
+
+        $constraint = Constraint::factory()->create([
+            'name' => 'Whispers Math Variant',
+            'slug' => 'whispers-math-variant',
+            'description' => $markdown,
+        ]);
+
+        $response = $this->get(route('constraints.index'));
+        $response->assertStatus(200);
+
+        $response->assertSee('ctc-markdown-content ctc-markdown-preview', false);
+        $response->assertSee('Whispers Math Variant');
+        $response->assertSee('$|a - b| \ge 5$');
+    }
 }

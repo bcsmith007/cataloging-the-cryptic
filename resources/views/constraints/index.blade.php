@@ -146,9 +146,9 @@
                                         {{ $constraint->name }}
                                     </a>
                                     @if ($constraint->description)
-                                        <p class="text-xs text-slate-400 line-clamp-2 mt-1 leading-relaxed">
-                                            {{ strip_tags(Str::markdown($constraint->description)) }}
-                                        </p>
+                                        <div class="ctc-markdown-content ctc-markdown-preview mt-1 leading-relaxed">
+                                            {!! Str::markdown($constraint->description) !!}
+                                        </div>
                                     @else
                                         <p class="text-xs text-slate-500 italic mt-1">
                                             No definition added yet.

@@ -274,7 +274,9 @@
                                     </span>
                                 </div>
                                 @if (!empty($category->description))
-                                    <p class="text-xs text-slate-400 line-clamp-2">{{ strip_tags(Str::markdown($category->description)) }}</p>
+                                    <div class="ctc-markdown-content ctc-markdown-preview">
+                                        {!! Str::markdown($category->description) !!}
+                                    </div>
                                 @endif
                             </div>
 
@@ -324,7 +326,9 @@
                                     </span>
                                 </div>
                                 @if (!empty($constraint->description))
-                                    <p class="text-xs text-slate-400 line-clamp-2">{{ strip_tags(Str::markdown($constraint->description)) }}</p>
+                                    <div class="ctc-markdown-content ctc-markdown-preview">
+                                        {!! Str::markdown($constraint->description) !!}
+                                    </div>
                                 @endif
                             </div>
 
