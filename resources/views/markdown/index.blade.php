@@ -74,6 +74,10 @@
                     ['symbol' => '≠', 'name' => 'Not equal'],
                     ['symbol' => '±', 'name' => 'Plus-or-minus'],
                     ['symbol' => '∑', 'name' => 'Summation'],
+                    ['symbol' => '≡', 'name' => 'Congruent / Modular equivalence'],
+                    ['symbol' => '√', 'name' => 'Square root'],
+                    ['symbol' => '∈', 'name' => 'Element of (set membership)'],
+                    ['symbol' => '∞', 'name' => 'Infinity'],
                     ['symbol' => '○', 'name' => 'Circle (circle cell)'],
                     ['symbol' => '●', 'name' => 'Filled circle (Kropki dot)'],
                     ['symbol' => '◇', 'name' => 'Diamond'],
@@ -104,7 +108,8 @@
         <a href="#callouts" class="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 transition-colors">4. Callout Quotes</a>
         <a href="#coordinates" class="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 transition-colors">5. Coordinates &amp; Code</a>
         <a href="#links-tables" class="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 transition-colors">6. Links &amp; Tables</a>
-        <a href="#playground" class="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-colors">7. Live Playground</a>
+        <a href="#math" class="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 transition-colors">7. Inline Math ($...$)</a>
+        <a href="#playground" class="px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-colors">8. Live Playground</a>
     </div>
 
     {{-- Tutorial Section 1: Text & Emphasis --}}
@@ -426,12 +431,115 @@ Given digits are placed at:
         </div>
     </section>
 
+    {{-- Tutorial Section 7: Inline Math & LaTeX Formulas --}}
+    <section id="math" class="space-y-4 pt-6 border-t border-slate-800/80">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono font-bold text-sm">
+                7
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                    <span>Inline Math &amp; LaTeX Formulas</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">KaTeX</span>
+                </h2>
+                <p class="text-xs text-slate-400">
+                    Enclose expressions in single dollar signs (<code>$...$</code>) for inline formulas, or double dollar signs (<code>$$...$$</code>) for centered display equations.
+                </p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {{-- Input --}}
+            <div class="rounded-xl bg-slate-900/90 border border-slate-800 overflow-hidden flex flex-col">
+                <div class="px-4 py-2.5 bg-slate-950/80 border-b border-slate-800 text-[11px] font-mono text-slate-400 flex items-center justify-between">
+                    <span>WHAT YOU TYPE (MARKDOWN + LATEX)</span>
+                    <button type="button" class="copy-snippet-btn hover:text-white transition-colors" data-clipboard-target="#snippet-7">Copy</button>
+                </div>
+                <pre id="snippet-7" class="p-4 text-xs font-mono text-slate-300 overflow-x-auto whitespace-pre leading-relaxed flex-1">* **Cell Arithmetic:** $r_1c_1 + r_2c_2 = 10$
+* **Summation Formula:** $\sum_{i=1}^{n} c_i = 45$
+* **Inequalities &amp; Differences:** $|a - b| \ge 5$ and $x \ne y$
+* **Fractions &amp; Roots:** $\frac{A + B}{2} \le \sqrt{C}$
+* **Modular Arithmetic:** $r_5c_5 \equiv 1 \pmod{3}$
+* **Set Membership:** $d \in \{1, 2, 4, 8\}$
+
+Centered block equation:
+$$
+\sum_{k=1}^{9} k = 45 \quad \text{and} \quad \prod_{j=1}^{3} x_j = 72
+$$</pre>
+            </div>
+
+            {{-- Rendered Output --}}
+            <div class="rounded-xl bg-slate-900/50 border border-slate-800 overflow-hidden flex flex-col">
+                <div class="px-4 py-2.5 bg-slate-950/80 border-b border-slate-800 text-[11px] font-mono text-emerald-400 flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span>HOW IT RENDERS IN CTC</span>
+                </div>
+                <div class="p-4 ctc-markdown-content flex-1">
+                    {!! Str::markdown("* **Cell Arithmetic:** \$r_1c_1 + r_2c_2 = 10\$\n* **Summation Formula:** \$\\sum_{i=1}^{n} c_i = 45\$\n* **Inequalities & Differences:** \$|a - b| \\ge 5\$ and \$x \\ne y\$\n* **Fractions & Roots:** \$\\frac{A + B}{2} \\le \\sqrt{C}\$\n* **Modular Arithmetic:** \$r_5c_5 \\equiv 1 \\pmod{3}\$\n* **Set Membership:** \$d \\in \\{1, 2, 4, 8\\}\$\n\nCentered block equation:\n\$\$\n\\sum_{k=1}^{9} k = 45 \\quad \\text{and} \\quad \\prod_{j=1}^{3} x_j = 72\n\$\$") !!}
+                </div>
+            </div>
+        </div>
+
+        {{-- LaTeX Syntax Quick Reference Table --}}
+        <div class="rounded-xl border border-slate-800 bg-slate-950/70 p-4 overflow-x-auto text-xs font-mono">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono mb-2">
+                Common Math &amp; LaTeX Cheat Sheet
+            </div>
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="border-b border-slate-800 text-slate-400">
+                        <th class="py-2 pr-4">Concept</th>
+                        <th class="py-2 px-4">LaTeX Code</th>
+                        <th class="py-2 pl-4">Description / Usage</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 text-slate-300">
+                    <tr>
+                        <td class="py-2 pr-4 font-semibold text-white">Inline Math</td>
+                        <td class="py-2 px-4 font-mono text-emerald-400">$r_1c_1 = 5$</td>
+                        <td class="py-2 pl-4 text-slate-400">Single dollar signs for flowing in-sentence math</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 pr-4 font-semibold text-white">Display / Centered</td>
+                        <td class="py-2 px-4 font-mono text-emerald-400">$$\sum_{i=1}^n x_i = 45$$</td>
+                        <td class="py-2 pl-4 text-slate-400">Double dollar signs for standout standalone equations</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 pr-4 font-semibold text-white">Subscripts &amp; Superscripts</td>
+                        <td class="py-2 px-4 font-mono text-emerald-400">$r_1, c_2, x^2$</td>
+                        <td class="py-2 pl-4 text-slate-400"><code>_</code> for subscript digits, <code>^</code> for exponents</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 pr-4 font-semibold text-white">Sums &amp; Products</td>
+                        <td class="py-2 px-4 font-mono text-emerald-400">\sum_{i=1}^n, \prod_{j=1}^k</td>
+                        <td class="py-2 pl-4 text-slate-400">Upper and lower limits for killer cage or arrow totals</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 pr-4 font-semibold text-white">Inequalities &amp; Relations</td>
+                        <td class="py-2 px-4 font-mono text-emerald-400">\le, \ge, \ne, \equiv</td>
+                        <td class="py-2 pl-4 text-slate-400">Less-or-equal, greater-or-equal, not-equal, congruence</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 pr-4 font-semibold text-white">Fractions &amp; Roots</td>
+                        <td class="py-2 px-4 font-mono text-emerald-400">\frac{a}{b}, \sqrt{x}</td>
+                        <td class="py-2 pl-4 text-slate-400">Ratios and radical roots (e.g. geometric means)</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 pr-4 font-semibold text-white">Modular Arithmetic</td>
+                        <td class="py-2 px-4 font-mono text-emerald-400">x \pmod{3}</td>
+                        <td class="py-2 pl-4 text-slate-400">Modulo lines, parity equivalence, and remainder arithmetic</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     {{-- Interactive Live Playground Section --}}
     <section id="playground" class="space-y-4 pt-6 border-t border-slate-800/80">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-emerald-400 font-mono font-bold text-sm">
-                    7
+                    8
                 </div>
                 <div>
                     <h2 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
@@ -548,7 +656,7 @@ Given digits are placed at:
 {{-- Interactive Client-Side Script for Copy Palette and Live Playground --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var defaultSample = "### Whispers & Arrow Variant Rules\n\nNormal Sudoku rules apply. Additionally, the following variant mechanics are active:\n\n* **German Whispers Lines:** Adjacent digits along green lines must differ by at least 5.\n* **Arrow Sums:** Digits along an arrow sum to the number in the attached bulb:\n  * `r2c2` &rarr; `r3c2` &rarr; Bulb at `r4c2`\n  * Bulbs must contain a single digit &ge; 3\n\n> **Important Note:** Digits along an arrow may repeat if permitted by normal Sudoku rules (e.g. crossing between boxes).\n\n| Line Color | Rule Type | Required Difference |\n| :--- | :--- | :--- |\n| Green | German Whispers | &ge; 5 |\n| Purple | Renban | Consecutive (any order) |\n| Peach | Entropic | Low (1-3), Mid (4-6), High (7-9) |\n\nPlay online with [SudokuPad](https://sudokupad.app).";
+    var defaultSample = "### Whispers, Arrow & Math Variant Rules\n\nNormal Sudoku rules apply. Additionally, the following variant mechanics are active:\n\n* **German Whispers Lines:** Adjacent digits along green lines must differ by at least 5: $|a - b| \\ge 5$.\n* **Arrow Sums:** Digits along an arrow sum to the number in the attached bulb:\n  * `r2c2` &rarr; `r3c2` &rarr; Bulb at `r4c2`\n  * Total sum formula: $\\sum_{i=1}^{n} c_i = B$ where $B \\ge 3$\n* **Parity & Modulo:** The center cell satisfies $r_5c_5 \\equiv 0 \\pmod{2}$.\n\n> **Important Note:** Digits along an arrow may repeat if permitted by normal Sudoku rules (e.g. crossing between boxes).\n\n| Line Color | Rule Type | Mathematical Formula |\n| :--- | :--- | :--- |\n| Green | German Whispers | $|x - y| \\ge 5$ |\n| Purple | Renban | Consecutive: $\\max - \\min = n - 1$ |\n| Peach | Entropic | Set: $\\{1, 2, 3\\} \\pmod{3}$ |\n\nCentered block equation:\n$$\n\\sum_{k=1}^{9} k = 45 \\quad \\text{and} \\quad \\prod_{j=1}^{3} x_j = 72\n$$\n\nPlay online with [SudokuPad](https://sudokupad.app).";
 
     // 1. Quick Symbol Copy Buttons
     var feedbackLabel = document.getElementById('copy-feedback-label');
@@ -599,8 +707,15 @@ document.addEventListener('DOMContentLoaded', function () {
     function parseClientMarkdown(src) {
         if (!src) return '<p class="text-slate-500 italic">Start typing in the left box to see your rendered output...</p>';
 
+        // Protect LaTeX math formulas ($...$ and $$...$$) from markdown syntax replacements
+        var mathBlocks = [];
+        var text = src.replace(/(\$\$[\s\S]+?\$\$|\$[^\$\n]+?\$)/g, function (match) {
+            mathBlocks.push(match);
+            return '___CTC_MATH_' + (mathBlocks.length - 1) + '___';
+        });
+
         // Escape raw HTML tags (except safe entities &amp;, &rarr;, etc.)
-        var text = src.replace(/&(?!([a-zA-Z0-9]+|#[0-9]{1,6});)/g, '&amp;');
+        text = text.replace(/&(?!([a-zA-Z0-9]+|#[0-9]{1,6});)/g, '&amp;');
 
         // Tables
         text = text.replace(/((?:\|[^\n]+\|\r?\n)+)/g, function (match) {
@@ -673,6 +788,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return '<p>' + trimmed.replace(/\n/g, '<br>') + '</p>';
         }).join('\n');
 
+        // Restore protected math blocks
+        formatted = formatted.replace(/___CTC_MATH_(\d+)___/g, function (match, index) {
+            return mathBlocks[parseInt(index, 10)] || '';
+        });
+
         return formatted;
     }
 
@@ -687,6 +807,9 @@ document.addEventListener('DOMContentLoaded', function () {
         function updatePlayground() {
             var val = inputEl.value;
             previewEl.innerHTML = parseClientMarkdown(val);
+            if (window.renderMath) {
+                window.renderMath(previewEl);
+            }
             if (charCountEl) {
                 charCountEl.textContent = val.length.toLocaleString() + ' chars';
             }
@@ -694,6 +817,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         inputEl.value = defaultSample;
         updatePlayground();
+
+        // Retry KaTeX render briefly after load in case Vite app.js finished just after DOMContentLoaded
+        if (!window.renderMath) {
+            setTimeout(function () {
+                if (window.renderMath) {
+                    window.renderMath(previewEl);
+                }
+            }, 150);
+        }
 
         inputEl.addEventListener('input', updatePlayground);
 

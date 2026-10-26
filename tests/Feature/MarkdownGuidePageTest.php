@@ -24,6 +24,9 @@ class MarkdownGuidePageTest extends TestCase
         $response->assertSee('&rarr;', false);
         $response->assertSee('&amp;rarr;', false);
         $response->assertSee('German Whispers');
+        $response->assertSee('Inline Math &amp; LaTeX Formulas', false);
+        $response->assertSee('KaTeX');
+        $response->assertSee('r_1c_1 + r_2c_2 = 10');
 
         // Trailing slash /markdown/
         $trailingResponse = $this->get('/markdown/');
