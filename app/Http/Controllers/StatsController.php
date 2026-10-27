@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Video;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -18,18 +19,19 @@ class StatsController extends Controller
      */
     public function index(): View
     {
-        $stats = Cache::remember('catalog_analytics_summary_v5', 1800, function () {
+        $stats = Cache::remember('catalog_analytics_summary_v6', 1800, function () {
             return $this->computeStats();
         });
 
-        if (! is_array($stats) || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'])) {
+        if (! is_array($stats) || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'])) {
             $stats = $this->computeStats();
-            Cache::put('catalog_analytics_summary_v5', $stats, 1800);
+            Cache::put('catalog_analytics_summary_v6', $stats, 1800);
         }
 
         $stats['categoryMonthly'] = $stats['categoryMonthly'] ?? [];
         $stats['constraintStats'] = $stats['constraintStats'] ?? [];
         $stats['totalConstraintOccurrences'] = $stats['totalConstraintOccurrences'] ?? 0;
+        $stats['totalUniqueConstraints'] = $stats['totalUniqueConstraints'] ?? count($stats['constraintStats'] ?? []);
         $stats['totalVariantPuzzles'] = $stats['totalVariantPuzzles'] ?? 0;
         $stats['observations'] = $stats['observations'] ?? [];
         $stats['musicStats'] = $stats['musicStats'] ?? [
@@ -485,6 +487,7 @@ class StatsController extends Controller
             ->get();
 
         $totalConstraintOccurrences = (int) $constraintStatsRaw->sum('puzzle_count');
+        $totalUniqueConstraints = $constraintStatsRaw->count();
 
         $totalVariantPuzzles = DB::table('puzzles')
             ->join('categories', 'puzzles.category_id', '=', 'categories.id')
@@ -494,19 +497,7 @@ class StatsController extends Controller
             })
             ->count();
 
-        $constraintStats = $constraintStatsRaw->map(function ($row) use ($totalConstraintOccurrences) {
-            $cnt = (int) $row->puzzle_count;
-
-            return [
-                'id' => (int) $row->id,
-                'name' => (string) $row->name,
-                'slug' => (string) $row->slug,
-                'count' => $cnt,
-                'percentage' => $totalConstraintOccurrences > 0
-                    ? round(($cnt / $totalConstraintOccurrences) * 100, 1)
-                    : 0,
-            ];
-        })->values()->all();
+        $constraintStats = $this->formatConstraintStats($constraintStatsRaw, $totalConstraintOccurrences);
 
         $musicStats = $this->computeMusicStats();
 
@@ -535,6 +526,7 @@ class StatsController extends Controller
             'categoryMonthly' => $monthlyCategories,
             'constraintStats' => $constraintStats,
             'totalConstraintOccurrences' => $totalConstraintOccurrences,
+            'totalUniqueConstraints' => $totalUniqueConstraints,
             'totalVariantPuzzles' => $totalVariantPuzzles,
             'musicStats' => $musicStats,
             'milestones' => [
@@ -552,6 +544,95 @@ class StatsController extends Controller
                 $dowData
             ),
         ];
+    }
+
+    /**
+     * Format and group the tail constraints (~last 25%) into an "Other" category for clean pie chart display.
+     *
+     * @param  Collection<int, object>  $constraintStatsRaw
+     * @return array<int, array<string, mixed>>
+     */
+    protected function formatConstraintStats(Collection $constraintStatsRaw, int $totalConstraintOccurrences): array
+    {
+        $items = $constraintStatsRaw->map(function ($row) use ($totalConstraintOccurrences) {
+            $cnt = (int) $row->puzzle_count;
+
+            return [
+                'id' => (int) $row->id,
+                'name' => (string) $row->name,
+                'slug' => (string) $row->slug,
+                'count' => $cnt,
+                'percentage' => $totalConstraintOccurrences > 0
+                    ? round(($cnt / $totalConstraintOccurrences) * 100, 1)
+                    : 0,
+                'is_other' => false,
+                'url' => route('constraints.show', (string) $row->slug),
+            ];
+        })->values();
+
+        $totalItems = $items->count();
+
+        // Only group if there are at least 4 constraints and total occurrences exist
+        if ($totalItems < 4 || $totalConstraintOccurrences <= 0) {
+            return $items->all();
+        }
+
+        // Evaluate candidate split points k:
+        // We want at least 2 prominent items (k >= 2)
+        // and at least 2 items combined into "Other" (totalItems - k >= 2 => k <= totalItems - 2).
+        $bestK = null;
+        $bestScore = PHP_FLOAT_MAX;
+
+        for ($k = 2; $k <= $totalItems - 2; $k++) {
+            $tailCount = $items->slice($k)->sum('count');
+            $tailPct = ($tailCount / $totalConstraintOccurrences) * 100;
+
+            // Tail percentage should be in a reasonable range around 25% (between 10% and 40%)
+            if ($tailPct < 10.0 || $tailPct > 40.0) {
+                continue;
+            }
+
+            // The first item in Other shouldn't be an individually massive constraint (> 15% of all occurrences)
+            if (($items[$k]['percentage'] ?? 0) > 15.0) {
+                continue;
+            }
+
+            // Check if boundary breaks a tie between constraints with equal count
+            $isTie = ($items[$k - 1]['count'] === $items[$k]['count']);
+
+            // Score: closeness to 25.0%, with a penalty for breaking a tie
+            $score = abs($tailPct - 25.0) + ($isTie ? 3.0 : 0.0);
+
+            if ($score < $bestScore) {
+                $bestScore = $score;
+                $bestK = $k;
+            }
+        }
+
+        if ($bestK === null) {
+            return $items->all();
+        }
+
+        $prominent = $items->slice(0, $bestK)->values();
+        $tail = $items->slice($bestK)->values();
+
+        $otherCount = (int) $tail->sum('count');
+        $otherPercentage = $totalConstraintOccurrences > 0
+            ? round(($otherCount / $totalConstraintOccurrences) * 100, 1)
+            : 0;
+
+        $otherEntry = [
+            'id' => null,
+            'name' => 'Other',
+            'slug' => null,
+            'count' => $otherCount,
+            'percentage' => $otherPercentage,
+            'is_other' => true,
+            'url' => route('constraints.index'),
+            'distinct_constraints_count' => $tail->count(),
+        ];
+
+        return $prominent->push($otherEntry)->all();
     }
 
     /**
@@ -599,12 +680,12 @@ class StatsController extends Controller
 
         // 3. Variant Sudoku Constraints Observation
         if (! empty($constraintStats)) {
-            $topNames = array_slice(array_column($constraintStats, 'name'), 0, 4);
+            $topNames = array_slice(array_filter(array_column($constraintStats, 'name'), fn ($n) => $n !== 'Other'), 0, 4);
             if (count($topNames) >= 2) {
                 $last = array_pop($topNames);
                 $namesList = implode(', ', $topNames).', and '.$last;
             } else {
-                $namesList = $topNames[0];
+                $namesList = $topNames[0] ?? 'Variant constraints';
             }
             $constraintsObs = "{$namesList} represent the most prolific variant mechanics tagged across Variant Sudoku solves on the channel.";
         } else {

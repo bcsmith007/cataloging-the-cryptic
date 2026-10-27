@@ -603,4 +603,99 @@ class CatalogStatsTest extends TestCase
 
         $response->assertSee('No intro or outro music indexed in the catalog yet.');
     }
+
+    /**
+     * Test that the stats page combines the tail ~25% of variant constraints into an "Other" wedge
+     * linking to /constraints instead of an individual constraint.
+     */
+    public function test_stats_page_combines_tail_constraints_around_twenty_five_percent_into_other_wedge(): void
+    {
+        $variantCategory = Category::factory()->create([
+            'name' => 'Variant Sudoku',
+            'slug' => 'variant-sudoku',
+        ]);
+
+        // Define 8 constraints with counts that total 100 occurrences
+        // Top 3 = 75%, Tail 5 = 25%
+        $specs = [
+            ['name' => 'Thermo Lines', 'slug' => 'thermo-lines', 'count' => 40],
+            ['name' => 'Arrow Clues', 'slug' => 'arrow-clues', 'count' => 20],
+            ['name' => 'German Whispers', 'slug' => 'german-whispers', 'count' => 15],
+            ['name' => 'Renban Lines', 'slug' => 'renban-lines', 'count' => 7],
+            ['name' => 'Kropki Dots', 'slug' => 'kropki-dots', 'count' => 6],
+            ['name' => 'Killer Cages', 'slug' => 'killer-cages', 'count' => 5],
+            ['name' => 'Palindromes', 'slug' => 'palindromes', 'count' => 4],
+            ['name' => 'Between Lines', 'slug' => 'between-lines', 'count' => 3],
+        ];
+
+        foreach ($specs as $spec) {
+            $constraint = Constraint::factory()->create([
+                'name' => $spec['name'],
+                'slug' => $spec['slug'],
+            ]);
+
+            for ($i = 0; $i < $spec['count']; $i++) {
+                $puzzle = Puzzle::factory()->create([
+                    'category_id' => $variantCategory->id,
+                ]);
+                $puzzle->constraints()->attach($constraint->id);
+            }
+        }
+
+        $response = $this->get(route('stats'));
+        $response->assertStatus(200);
+
+        /** @var array $constraintStats */
+        $constraintStats = $response->viewData('constraintStats');
+        $this->assertIsArray($constraintStats);
+
+        // Expected: 3 prominent constraints + 1 "Other" wedge = 4 elements
+        $this->assertCount(4, $constraintStats);
+
+        $thermo = collect($constraintStats)->firstWhere('name', 'Thermo Lines');
+        $arrow = collect($constraintStats)->firstWhere('name', 'Arrow Clues');
+        $whispers = collect($constraintStats)->firstWhere('name', 'German Whispers');
+        $other = collect($constraintStats)->firstWhere('name', 'Other');
+
+        $this->assertNotNull($thermo);
+        $this->assertSame(40, $thermo['count']);
+        $this->assertSame(40.0, $thermo['percentage']);
+        $this->assertFalse($thermo['is_other']);
+        $this->assertSame(route('constraints.show', 'thermo-lines'), $thermo['url']);
+
+        $this->assertNotNull($arrow);
+        $this->assertSame(20, $arrow['count']);
+        $this->assertSame(20.0, $arrow['percentage']);
+
+        $this->assertNotNull($whispers);
+        $this->assertSame(15, $whispers['count']);
+        $this->assertSame(15.0, $whispers['percentage']);
+
+        // Verify "Other" wedge characteristics
+        $this->assertNotNull($other, 'An "Other" wedge must be created for the tail 25%');
+        $this->assertSame(25, $other['count']);
+        $this->assertSame(25.0, $other['percentage']);
+        $this->assertTrue($other['is_other']);
+        $this->assertNull($other['slug']);
+        $this->assertSame(route('constraints.index'), $other['url']);
+        $this->assertSame(5, $other['distinct_constraints_count']);
+
+        // Verify total metrics
+        $this->assertSame(100, $response->viewData('totalConstraintOccurrences'));
+        $this->assertSame(8, $response->viewData('totalUniqueConstraints'));
+
+        // HTML Assertions: Check badge displays all 8 unique constraints
+        $response->assertSee('8 Unique Constraints');
+        $response->assertSee('100 Tagged Rulesets');
+
+        // Check that "Other" links to the /constraints/ directory page
+        $response->assertSee(route('constraints.index'));
+        $response->assertSee('Other');
+
+        // Check observations mention actual constraint names and not "Other"
+        /** @var array $observations */
+        $observations = $response->viewData('observations');
+        $this->assertStringNotContainsString('Other', $observations['constraints']);
+        $this->assertStringContainsString('Thermo Lines', $observations['constraints']);
+    }
 }

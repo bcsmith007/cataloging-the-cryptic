@@ -425,7 +425,7 @@
 
             <div class="flex items-center gap-2">
                 <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
-                    {{ count($constraintStats ?? []) }} Unique Constraints
+                    {{ $totalUniqueConstraints ?? count($constraintStats ?? []) }} Unique Constraints
                 </span>
                 <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 font-mono">
                     {{ $totalConstraintOccurrences ?? 0 }} Tagged Rulesets
@@ -441,7 +441,7 @@
                         <canvas id="constraintPieChart"></canvas>
                     </div>
                     <div class="text-[11px] text-slate-400 mt-3 font-mono text-center">
-                        Multi-constraint puzzles count each applied rule individually
+                        Multi-constraint puzzles count each applied rule individually &bull; Click wedge to view
                     </div>
                 </div>
 
@@ -449,10 +449,17 @@
                 <div class="lg:col-span-7">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[360px] overflow-y-auto pr-1">
                         @foreach ($constraintStats as $index => $c)
-                            <div class="p-2.5 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors flex items-center justify-between text-xs">
+                            <div class="p-2.5 rounded-xl bg-slate-950/60 border {{ !empty($c['is_other']) ? 'border-dashed border-slate-700/80 bg-slate-900/40' : 'border-slate-800/80 hover:border-slate-700' }} transition-colors flex items-center justify-between text-xs">
                                 <div class="flex items-center gap-2.5 min-w-0 pr-2">
-                                    <span class="w-3 h-3 rounded-full shrink-0 constraint-dot" data-index="{{ $index }}"></span>
-                                    <a href="{{ route('constraints.show', $c['slug']) }}" class="font-semibold text-slate-200 hover:text-emerald-400 transition-colors truncate" title="{{ $c['name'] }}">{{ $c['name'] }}</a>
+                                    <span class="w-3 h-3 rounded-full shrink-0 constraint-dot" data-index="{{ $index }}" @if(!empty($c['is_other'])) style="background-color: #64748b;" @endif></span>
+                                    <a href="{{ $c['url'] ?? ($c['slug'] ? route('constraints.show', $c['slug']) : route('constraints.index')) }}"
+                                       class="font-semibold text-slate-200 hover:text-emerald-400 transition-colors truncate"
+                                       title="{{ $c['name'] }}{{ !empty($c['is_other']) && !empty($c['distinct_constraints_count']) ? ' (' . $c['distinct_constraints_count'] . ' constraints - click to view catalog)' : '' }}">
+                                        {{ $c['name'] }}
+                                        @if (!empty($c['is_other']) && !empty($c['distinct_constraints_count']))
+                                            <span class="text-[11px] font-normal text-slate-400 font-mono">({{ $c['distinct_constraints_count'] }})</span>
+                                        @endif
+                                    </a>
                                 </div>
                                 <div class="flex items-center gap-3 shrink-0 font-mono">
                                     <span class="text-slate-400 text-[11px]">{{ $c['count'] }} {{ $c['count'] === 1 ? 'puzzle' : 'puzzles' }}</span>
@@ -1353,13 +1360,23 @@ document.addEventListener('DOMContentLoaded', function () {
         // Color the dot badges in the list
         document.querySelectorAll('.constraint-dot').forEach(dot => {
             const idx = parseInt(dot.getAttribute('data-index'), 10) || 0;
-            dot.style.backgroundColor = constraintColors[idx % constraintColors.length];
+            const item = constraintData[idx];
+            if (item && item.is_other) {
+                dot.style.backgroundColor = '#64748b';
+            } else {
+                dot.style.backgroundColor = constraintColors[idx % constraintColors.length];
+            }
         });
 
         const constraintCanvas = document.getElementById('constraintPieChart');
         if (constraintCanvas) {
             const constraintCtx = constraintCanvas.getContext('2d');
-            const bgSliceColors = constraintData.map((c, i) => constraintColors[i % constraintColors.length]);
+            const bgSliceColors = constraintData.map((c, i) => {
+                if (c.is_other) {
+                    return '#64748b';
+                }
+                return constraintColors[i % constraintColors.length];
+            });
 
             new Chart(constraintCtx, {
                 type: 'pie',
@@ -1376,6 +1393,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (event, elements) => {
+                        if (elements && elements.length > 0) {
+                            const index = elements[0].index;
+                            const item = constraintData[index];
+                            if (item) {
+                                if (item.url) {
+                                    window.location.href = item.url;
+                                } else if (item.slug) {
+                                    window.location.href = `/constraints/${item.slug}`;
+                                } else {
+                                    window.location.href = '{{ route('constraints.index') }}';
+                                }
+                            }
+                        }
+                    },
+                    onHover: (event, chartElement) => {
+                        const target = event.native ? event.native.target : (event.chart ? event.chart.canvas : null);
+                        if (target) {
+                            target.style.cursor = chartElement && chartElement.length > 0 ? 'pointer' : 'default';
+                        }
+                    },
                     plugins: {
                         legend: {
                             display: false,
@@ -1391,7 +1429,11 @@ document.addEventListener('DOMContentLoaded', function () {
                                 label: function (ctx) {
                                     const val = ctx.raw || 0;
                                     const pct = totalConstraintCount > 0 ? ((val / totalConstraintCount) * 100).toFixed(1) : 0;
-                                    return ` ${ctx.label}: ${val} ${val === 1 ? 'puzzle' : 'puzzles'} (${pct}%)`;
+                                    const item = constraintData[ctx.dataIndex];
+                                    if (item && item.is_other && item.distinct_constraints_count) {
+                                        return ` ${ctx.label} (${item.distinct_constraints_count} constraints): ${val} ${val === 1 ? 'puzzle' : 'puzzles'} (${pct}%) - Click to view directory`;
+                                    }
+                                    return ` ${ctx.label}: ${val} ${val === 1 ? 'puzzle' : 'puzzles'} (${pct}%) - Click to view rules`;
                                 }
                             }
                         }
