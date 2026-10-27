@@ -24,8 +24,8 @@
 
             <div class="flex items-center gap-3 flex-wrap">
                 <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300">
-                    <span class="text-emerald-400 font-mono font-bold mr-1.5">{{ number_format($constraints->count()) }}</span>
-                    <span>Distinct {{ Str::plural('Constraint', $constraints->count()) }}</span>
+                    <span class="text-emerald-400 font-mono font-bold mr-1.5">{{ number_format($constraints->total()) }}</span>
+                    <span>Distinct {{ Str::plural('Constraint', $constraints->total()) }}</span>
                 </span>
             </div>
         </div>
@@ -33,7 +33,13 @@
 
     {{-- Filter Search & Table Controls --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div class="relative max-w-sm w-full">
+        <form method="GET" action="{{ route('constraints.index') }}" class="relative max-w-sm w-full">
+            @if ($sort !== 'videos')
+                <input type="hidden" name="sort" value="{{ $sort }}">
+            @endif
+            @if ($direction !== 'desc')
+                <input type="hidden" name="dir" value="{{ $direction }}">
+            @endif
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -41,14 +47,25 @@
             </div>
             <input
                 type="text"
+                name="q"
+                value="{{ $search }}"
                 id="constraint-table-search"
-                placeholder="Filter constraints by name or rules..."
-                class="w-full pl-9 pr-4 py-2 bg-slate-900/80 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                placeholder="Search constraints (press Enter)..."
+                class="w-full pl-9 @if($search !== '') pr-16 @else pr-4 @endif py-2 bg-slate-900/80 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
             />
-        </div>
+            @if ($search !== '')
+                <a href="{{ route('constraints.index', array_filter(['sort' => $sort !== 'videos' ? $sort : null, 'dir' => $direction !== 'desc' ? $direction : null])) }}" class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 hover:text-emerald-400" title="Clear search">
+                    ✕ Clear
+                </a>
+            @endif
+        </form>
 
         <div class="text-xs text-slate-400 flex items-center gap-2">
-            <span>Tip: Click column headers to toggle sorting order.</span>
+            @if ($constraints->total() > 0)
+                <span>Showing {{ number_format($constraints->firstItem()) }}–{{ number_format($constraints->lastItem()) }} of {{ number_format($constraints->total()) }}</span>
+                <span class="text-slate-600">&bull;</span>
+            @endif
+            <span>Click column headers to sort</span>
         </div>
     </div>
 
@@ -59,8 +76,8 @@
                 <thead class="bg-slate-950/80 text-xs font-semibold uppercase tracking-wider text-slate-400">
                     <tr>
                         {{-- 1. Name & Definition Column --}}
-                        <th scope="col" class="py-3.5 pl-6 pr-4 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="name" data-default-dir="asc">
-                            <a href="{{ route('constraints.index', ['sort' => 'name', 'dir' => ($sort === 'name' && $direction === 'asc') ? 'desc' : 'asc']) }}" class="inline-flex items-center gap-1.5">
+                        <th scope="col" class="py-3.5 pl-6 pr-4 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="name">
+                            <a href="{{ route('constraints.index', array_filter(['sort' => 'name', 'dir' => ($sort === 'name' && $direction === 'asc') ? 'desc' : 'asc', 'q' => $search ?: null])) }}" class="inline-flex items-center gap-1.5">
                                 <span>Constraint & Definition</span>
                                 <span class="sort-indicator text-slate-500 group-hover:text-emerald-400 transition-colors">
                                     @if ($sort === 'name')
@@ -73,8 +90,8 @@
                         </th>
 
                         {{-- 2. Number of Videos Column --}}
-                        <th scope="col" class="py-3.5 px-4 text-center cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="videos" data-default-dir="desc">
-                            <a href="{{ route('constraints.index', ['sort' => 'videos', 'dir' => ($sort === 'videos' && $direction === 'desc') ? 'asc' : 'desc']) }}" class="inline-flex items-center gap-1.5 justify-center">
+                        <th scope="col" class="py-3.5 px-4 text-center cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="videos">
+                            <a href="{{ route('constraints.index', array_filter(['sort' => 'videos', 'dir' => ($sort === 'videos' && $direction === 'desc') ? 'asc' : 'desc', 'q' => $search ?: null])) }}" class="inline-flex items-center gap-1.5 justify-center">
                                 <span>Videos</span>
                                 <span class="sort-indicator text-slate-500 group-hover:text-emerald-400 transition-colors">
                                     @if ($sort === 'videos')
@@ -87,8 +104,8 @@
                         </th>
 
                         {{-- 3. Number of Puzzles Column --}}
-                        <th scope="col" class="py-3.5 px-4 text-center cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="puzzles" data-default-dir="desc">
-                            <a href="{{ route('constraints.index', ['sort' => 'puzzles', 'dir' => ($sort === 'puzzles' && $direction === 'desc') ? 'asc' : 'desc']) }}" class="inline-flex items-center gap-1.5 justify-center">
+                        <th scope="col" class="py-3.5 px-4 text-center cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="puzzles">
+                            <a href="{{ route('constraints.index', array_filter(['sort' => 'puzzles', 'dir' => ($sort === 'puzzles' && $direction === 'desc') ? 'asc' : 'desc', 'q' => $search ?: null])) }}" class="inline-flex items-center gap-1.5 justify-center">
                                 <span>Puzzles</span>
                                 <span class="sort-indicator text-slate-500 group-hover:text-emerald-400 transition-colors">
                                     @if ($sort === 'puzzles')
@@ -101,8 +118,8 @@
                         </th>
 
                         {{-- 4. First Video on Channel --}}
-                        <th scope="col" class="py-3.5 px-4 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="first" data-default-dir="asc">
-                            <a href="{{ route('constraints.index', ['sort' => 'first', 'dir' => ($sort === 'first' && $direction === 'asc') ? 'desc' : 'asc']) }}" class="inline-flex items-center gap-1.5">
+                        <th scope="col" class="py-3.5 px-4 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="first">
+                            <a href="{{ route('constraints.index', array_filter(['sort' => 'first', 'dir' => ($sort === 'first' && $direction === 'asc') ? 'desc' : 'asc', 'q' => $search ?: null])) }}" class="inline-flex items-center gap-1.5">
                                 <span>First on Channel</span>
                                 <span class="sort-indicator text-slate-500 group-hover:text-emerald-400 transition-colors">
                                     @if ($sort === 'first')
@@ -115,8 +132,8 @@
                         </th>
 
                         {{-- 5. Most Recent Video on Channel --}}
-                        <th scope="col" class="py-3.5 pl-4 pr-6 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="recent" data-default-dir="desc">
-                            <a href="{{ route('constraints.index', ['sort' => 'recent', 'dir' => ($sort === 'recent' && $direction === 'desc') ? 'asc' : 'desc']) }}" class="inline-flex items-center gap-1.5">
+                        <th scope="col" class="py-3.5 pl-4 pr-6 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="recent">
+                            <a href="{{ route('constraints.index', array_filter(['sort' => 'recent', 'dir' => ($sort === 'recent' && $direction === 'desc') ? 'asc' : 'desc', 'q' => $search ?: null])) }}" class="inline-flex items-center gap-1.5">
                                 <span>Most Recent on Channel</span>
                                 <span class="sort-indicator text-slate-500 group-hover:text-emerald-400 transition-colors">
                                     @if ($sort === 'recent')
@@ -223,6 +240,13 @@
             </table>
         </div>
     </div>
+
+    {{-- Pagination Controls --}}
+    @if ($constraints->hasPages())
+        <div class="pt-6 border-t border-slate-800 flex justify-center">
+            {{ $constraints->links() }}
+        </div>
+    @endif
 </div>
 
 <script>

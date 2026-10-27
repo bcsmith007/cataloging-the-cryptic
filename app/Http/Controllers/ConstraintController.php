@@ -6,6 +6,7 @@ use App\Models\Constraint;
 use App\Models\Video;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
 /**
@@ -23,6 +24,7 @@ class ConstraintController extends Controller
         if (! in_array($direction, ['asc', 'desc'])) {
             $direction = 'desc';
         }
+        $search = trim($request->query('q', $request->query('search', '')));
 
         $constraints = Constraint::query()
             ->withCount('puzzles')
@@ -64,6 +66,13 @@ class ConstraintController extends Controller
                 return $constraint;
             });
 
+        if ($search !== '') {
+            $constraints = $constraints->filter(function (Constraint $c) use ($search) {
+                return str_contains(Str::lower($c->name), Str::lower($search))
+                    || str_contains(Str::lower($c->description ?? ''), Str::lower($search));
+            })->values();
+        }
+
         $constraints = match ($sort) {
             'name' => $direction === 'asc'
                 ? $constraints->sortBy(fn ($c) => Str::lower($c->name))->values()
@@ -82,7 +91,25 @@ class ConstraintController extends Controller
                 : $constraints->sortByDesc('videos_count')->values(),
         };
 
-        return view('constraints.index', compact('constraints', 'sort', 'direction'));
+        $perPage = 20;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage('page');
+        $totalConstraints = $constraints->count();
+        $currentPageItems = $constraints->slice(($currentPage - 1) * $perPage, $perPage)->values();
+
+        $paginatedConstraints = new LengthAwarePaginator(
+            $currentPageItems,
+            $totalConstraints,
+            $perPage,
+            $currentPage,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'query' => $request->query(),
+            ]
+        );
+
+        $constraints = $paginatedConstraints;
+
+        return view('constraints.index', compact('constraints', 'sort', 'direction', 'search'));
     }
 
     /**

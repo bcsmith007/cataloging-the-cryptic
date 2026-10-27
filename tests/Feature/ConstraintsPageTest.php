@@ -306,4 +306,50 @@ class ConstraintsPageTest extends TestCase
         $response->assertSee('Whispers Math Variant');
         $response->assertSee('$|a - b| \ge 5$');
     }
+
+    /**
+     * Test that the constraints index table paginates at 20 items per page with working page links.
+     */
+    public function test_constraints_index_paginates_at_twenty_items_per_page(): void
+    {
+        // Create 25 constraints with distinct names
+        for ($i = 1; $i <= 25; $i++) {
+            $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+            Constraint::factory()->create([
+                'name' => "Constraint {$num}",
+                'slug' => "constraint-{$num}",
+                'description' => "Description for constraint {$num}",
+            ]);
+        }
+
+        // Request page 1 with sort by name ascending
+        $responsePage1 = $this->get(route('constraints.index', ['sort' => 'name', 'dir' => 'asc']));
+        $responsePage1->assertStatus(200);
+
+        // Header shows total count 25
+        $responsePage1->assertSee('25');
+        $responsePage1->assertSee('Showing 1–20 of 25');
+
+        // Page 1 should contain items 01 through 20
+        $responsePage1->assertSee('Constraint 01');
+        $responsePage1->assertSee('Constraint 20');
+        // Page 1 should NOT contain item 21
+        $responsePage1->assertDontSee('Constraint 21');
+
+        // Verify pagination link to page 2 is present
+        $responsePage1->assertSee('page=2');
+
+        // Request page 2
+        $responsePage2 = $this->get(route('constraints.index', ['sort' => 'name', 'dir' => 'asc', 'page' => 2]));
+        $responsePage2->assertStatus(200);
+
+        // Page 2 shows range 21–25 of 25
+        $responsePage2->assertSee('Showing 21–25 of 25');
+        // Page 2 should contain items 21 through 25
+        $responsePage2->assertSee('Constraint 21');
+        $responsePage2->assertSee('Constraint 25');
+        // Page 2 should NOT contain items from page 1
+        $responsePage2->assertDontSee('Constraint 01');
+        $responsePage2->assertDontSee('Constraint 20');
+    }
 }

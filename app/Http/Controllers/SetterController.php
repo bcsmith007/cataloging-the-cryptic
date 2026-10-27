@@ -6,6 +6,7 @@ use App\Models\Setter;
 use App\Models\Video;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 
 /**
@@ -23,6 +24,7 @@ class SetterController extends Controller
         if (! in_array($direction, ['asc', 'desc'])) {
             $direction = 'desc';
         }
+        $search = trim($request->query('q', $request->query('search', '')));
 
         $setters = Setter::query()
             ->withCount('puzzles')
@@ -63,6 +65,13 @@ class SetterController extends Controller
                 return $setter;
             });
 
+        if ($search !== '') {
+            $setters = $setters->filter(function (Setter $s) use ($search) {
+                return str_contains(Str::lower($s->name), Str::lower($search))
+                    || str_contains(Str::lower($s->bio ?? ''), Str::lower($search));
+            })->values();
+        }
+
         $setters = match ($sort) {
             'name' => $direction === 'asc'
                 ? $setters->sortBy(fn ($s) => Str::lower($s->name))->values()
@@ -78,7 +87,25 @@ class SetterController extends Controller
                 : $setters->sortByDesc('puzzles_count')->values(),
         };
 
-        return view('setters.index', compact('setters', 'sort', 'direction'));
+        $perPage = 20;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage('page');
+        $totalSetters = $setters->count();
+        $currentPageItems = $setters->slice(($currentPage - 1) * $perPage, $perPage)->values();
+
+        $paginatedSetters = new LengthAwarePaginator(
+            $currentPageItems,
+            $totalSetters,
+            $perPage,
+            $currentPage,
+            [
+                'path' => LengthAwarePaginator::resolveCurrentPath(),
+                'query' => $request->query(),
+            ]
+        );
+
+        $setters = $paginatedSetters;
+
+        return view('setters.index', compact('setters', 'sort', 'direction', 'search'));
     }
 
     /**
