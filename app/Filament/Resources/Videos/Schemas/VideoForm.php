@@ -151,7 +151,11 @@ class VideoForm
 
                         Grid::make(2)->schema([
                             Select::make('hosts')
-                                ->relationship('hosts', 'name')
+                                ->relationship(
+                                    name: 'hosts',
+                                    titleAttribute: 'name',
+                                    modifyQueryUsing: fn (Builder $query): Builder => $query->orderFeaturedFirst(),
+                                )
                                 ->multiple()
                                 ->preload()
                                 ->searchable()

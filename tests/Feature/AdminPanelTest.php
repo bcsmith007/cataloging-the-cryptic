@@ -1230,6 +1230,49 @@ class AdminPanelTest extends TestCase
     }
 
     /**
+     * Test that video editing form orders Simon and Mark first in hosts dropdown options.
+     */
+    public function test_video_form_hosts_dropdown_orders_simon_and_mark_first_then_alphabetically(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        // Create hosts in arbitrary order
+        Host::factory()->create(['name' => 'Zoe Puzzler', 'slug' => 'zoe-puzzler']);
+        Host::factory()->create(['name' => 'Mark Goodliffe', 'slug' => 'mark-goodliffe']);
+        Host::factory()->create(['name' => 'Alice Solver', 'slug' => 'alice-solver']);
+        Host::factory()->create(['name' => 'Simon Anthony', 'slug' => 'simon-anthony']);
+        Host::factory()->create(['name' => 'Bob Guest', 'slug' => 'bob-guest']);
+
+        $orderedHosts = Host::orderFeaturedFirst()->pluck('name')->values()->toArray();
+
+        $this->assertSame([
+            'Simon Anthony',
+            'Mark Goodliffe',
+            'Alice Solver',
+            'Bob Guest',
+            'Zoe Puzzler',
+        ], $orderedHosts);
+
+        $video = Video::factory()->create();
+
+        $component = Livewire::test(EditVideo::class, ['record' => $video->getRouteKey()]);
+        $component->assertSuccessful();
+
+        $hostsField = $component->instance()->form->getComponent('hosts');
+        $this->assertNotNull($hostsField);
+        $options = array_values($hostsField->getOptions());
+
+        $this->assertSame([
+            'Simon Anthony',
+            'Mark Goodliffe',
+            'Alice Solver',
+            'Bob Guest',
+            'Zoe Puzzler',
+        ], $options);
+    }
+
+    /**
      * Test that PuzzlesRelationManager allows typing a new category name on-the-fly.
      */
     public function test_puzzles_relation_manager_typing_new_category_creates_and_associates_category(): void

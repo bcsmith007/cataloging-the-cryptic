@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
 use App\Models\Concerns\HasUserTracking;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -70,5 +71,20 @@ class Host extends Model
     public function videos(): BelongsToMany
     {
         return $this->belongsToMany(Video::class, 'video_hosts');
+    }
+
+    /**
+     * Scope query to order Simon and Mark first, followed by everyone else alphabetically.
+     * Includes the ordering expression in SELECT to ensure compatibility with PostgreSQL SELECT DISTINCT.
+     *
+     * @param  Builder<Host>  $query
+     * @return Builder<Host>
+     */
+    public function scopeOrderFeaturedFirst(Builder $query): Builder
+    {
+        return $query
+            ->selectRaw("hosts.*, (CASE WHEN slug = 'simon-anthony' OR LOWER(name) LIKE 'simon%' THEN 1 WHEN slug = 'mark-goodliffe' OR LOWER(name) LIKE 'mark%' THEN 2 ELSE 3 END) AS host_order")
+            ->orderBy('host_order', 'asc')
+            ->orderBy('hosts.name', 'asc');
     }
 }
