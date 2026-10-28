@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
 use App\Models\Concerns\HasUserTracking;
+use App\Services\UrlSanitizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -62,6 +63,14 @@ class Host extends Model
         'created_by_id',
         'updated_by_id',
     ];
+
+    /**
+     * Mutator to ensure YouTube redirect URLs are unwrapped before saving.
+     */
+    public function setAvatarUrlAttribute(?string $value): void
+    {
+        $this->attributes['avatar_url'] = UrlSanitizer::unwrapYouTubeRedirect($value);
+    }
 
     /**
      * Get the videos featured by this host.

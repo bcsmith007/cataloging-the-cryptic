@@ -5,7 +5,9 @@ namespace App\Providers;
 use App\Http\Responses\LoginResponse;
 use App\Http\Responses\RegistrationResponse;
 use App\Services\TimezoneService;
+use App\Services\UrlSanitizer;
 use Carbon\Carbon;
+use Filament\Forms\Components\TextInput;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
@@ -49,6 +51,20 @@ class AppServiceProvider extends ServiceProvider
         // Blade directive for formatting datetimes in the active user timezone
         Blade::directive('userDateTime', function ($expression) {
             return "<?php echo \App\Services\TimezoneService::formatDateTime({$expression}); ?>";
+        });
+
+        // Filament TextInput macro to automatically unwrap YouTube redirect links on any URL field
+        TextInput::macro('unwrapRedirects', function () {
+            /** @var TextInput $this */
+            return $this
+                ->live(onBlur: true)
+                ->afterStateUpdated(function (TextInput $component, $state): void {
+                    $clean = UrlSanitizer::unwrapYouTubeRedirect($state);
+                    if ($clean !== $state && $component->hasContainer()) {
+                        $component->state($clean);
+                    }
+                })
+                ->dehydrateStateUsing(fn ($state) => UrlSanitizer::unwrapYouTubeRedirect($state));
         });
     }
 }

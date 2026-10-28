@@ -478,6 +478,7 @@ class PuzzlesRelationManager extends RelationManager
                                         TextInput::make('url')
                                             ->label('Link URL')
                                             ->url()
+                                            ->unwrapRedirects()
                                             ->required()
                                             ->maxLength(1024)
                                             ->columnSpan(2),

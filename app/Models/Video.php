@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
 use App\Models\Concerns\HasUserTracking;
+use App\Services\UrlSanitizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -328,6 +329,20 @@ class Video extends Model
         return Attribute::make(
             get: fn (?string $value): ?string => static::convertToWebpThumbnailUrl($value),
             set: fn (?string $value): ?string => static::convertToWebpThumbnailUrl($value),
+        );
+    }
+
+    /**
+     * Interact with the direct Patreon post URL attribute.
+     *
+     * Automatically unwraps YouTube redirect URLs.
+     *
+     * @return Attribute<string|null, string|null>
+     */
+    protected function patreonPostUrl(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value): ?string => UrlSanitizer::unwrapYouTubeRedirect($value),
         );
     }
 

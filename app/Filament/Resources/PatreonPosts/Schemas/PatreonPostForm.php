@@ -43,6 +43,7 @@ class PatreonPostForm
         return [
             TextInput::make('patreon_url')
                 ->label('Patreon Post URL or ID')
+                ->unwrapRedirects()
                 ->required()
                 ->maxLength(512)
                 ->placeholder('e.g. https://www.patreon.com/posts/whispering-shadows-98765432')

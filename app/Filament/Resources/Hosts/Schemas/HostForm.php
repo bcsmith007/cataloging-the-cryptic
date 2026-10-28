@@ -57,6 +57,7 @@ class HostForm
             TextInput::make('avatar_url')
                 ->label('Avatar Image URL')
                 ->url()
+                ->unwrapRedirects()
                 ->maxLength(512),
         ];
     }

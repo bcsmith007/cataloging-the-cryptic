@@ -106,6 +106,7 @@ class VideoForm
                             TextInput::make('patreon_post_url')
                                 ->label('Direct Patreon URL (Fallback)')
                                 ->url()
+                                ->unwrapRedirects()
                                 ->maxLength(512)
                                 ->helperText('Direct URL if not linked to a Patreon post record.')
                                 ->visible(fn (callable $get) => $get('access_level') === 'exclusive' || filled($get('patreon_post_id'))),

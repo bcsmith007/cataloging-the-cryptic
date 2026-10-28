@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
 use App\Models\Concerns\HasUserTracking;
+use App\Services\UrlSanitizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -69,6 +70,14 @@ class Puzzle extends Model
         'created_by_id',
         'updated_by_id',
     ];
+
+    /**
+     * Mutator to unwrap any embedded YouTube redirect links in raw rules.
+     */
+    public function setRulesRawAttribute(?string $value): void
+    {
+        $this->attributes['rules_raw'] = UrlSanitizer::unwrapAllInText($value);
+    }
 
     /**
      * The attributes that should be cast.

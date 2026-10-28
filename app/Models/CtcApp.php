@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\HasSlugRouteKey;
 use App\Models\Concerns\HasUserTracking;
 use App\Services\AffiliateUrlBuilder;
+use App\Services\UrlSanitizer;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -81,6 +82,34 @@ class CtcApp extends Model
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
+
+    /**
+     * Mutators to ensure YouTube redirect URLs are unwrapped before saving.
+     */
+    public function setWebUrlAttribute(?string $value): void
+    {
+        $this->attributes['web_url'] = UrlSanitizer::unwrapYouTubeRedirect($value);
+    }
+
+    public function setAppleStoreUrlAttribute(?string $value): void
+    {
+        $this->attributes['apple_store_url'] = UrlSanitizer::unwrapYouTubeRedirect($value);
+    }
+
+    public function setGooglePlayUrlAttribute(?string $value): void
+    {
+        $this->attributes['google_play_url'] = UrlSanitizer::unwrapYouTubeRedirect($value);
+    }
+
+    public function setSteamUrlAttribute(?string $value): void
+    {
+        $this->attributes['steam_url'] = UrlSanitizer::unwrapYouTubeRedirect($value);
+    }
+
+    public function setThumbnailUrlAttribute(?string $value): void
+    {
+        $this->attributes['thumbnail_url'] = UrlSanitizer::unwrapYouTubeRedirect($value);
+    }
 
     /**
      * The "booted" method of the model.

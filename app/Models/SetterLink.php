@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUserTracking;
+use App\Services\UrlSanitizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,6 +49,14 @@ class SetterLink extends Model
     protected $casts = [
         'order_column' => 'integer',
     ];
+
+    /**
+     * Mutator to ensure YouTube redirect URLs are unwrapped before saving.
+     */
+    public function setUrlAttribute(?string $value): void
+    {
+        $this->attributes['url'] = UrlSanitizer::unwrapYouTubeRedirect($value);
+    }
 
     /**
      * Available standard and custom link types and their user-friendly display labels.

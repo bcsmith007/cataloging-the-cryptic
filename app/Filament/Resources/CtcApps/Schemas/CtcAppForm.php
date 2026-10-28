@@ -80,6 +80,7 @@ class CtcAppForm
                         TextInput::make('thumbnail_url')
                             ->label('Thumbnail / Icon URL')
                             ->url()
+                            ->unwrapRedirects()
                             ->maxLength(2048)
                             ->columnSpanFull()
                             ->helperText('Direct link to an app icon or artwork image. If empty, a styled fallback tile is rendered.'),
@@ -92,24 +93,28 @@ class CtcAppForm
                             TextInput::make('apple_store_url')
                                 ->label('Apple App Store URL')
                                 ->url()
+                                ->unwrapRedirects()
                                 ->maxLength(2048)
                                 ->placeholder('https://apps.apple.com/app/...'),
 
                             TextInput::make('google_play_url')
                                 ->label('Google Play Store URL')
                                 ->url()
+                                ->unwrapRedirects()
                                 ->maxLength(2048)
                                 ->placeholder('https://play.google.com/store/apps/details?id=...'),
 
                             TextInput::make('steam_url')
                                 ->label('Steam Store URL')
                                 ->url()
+                                ->unwrapRedirects()
                                 ->maxLength(2048)
                                 ->placeholder('https://store.steampowered.com/app/...'),
 
                             TextInput::make('web_url')
                                 ->label('Web / Browser Player URL')
                                 ->url()
+                                ->unwrapRedirects()
                                 ->maxLength(2048)
                                 ->placeholder('https://app.crackingthecryptic.com/...'),
                         ]),

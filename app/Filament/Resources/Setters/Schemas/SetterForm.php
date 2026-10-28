@@ -174,6 +174,7 @@ class SetterForm
                         TextInput::make('url')
                             ->label('Link URL')
                             ->url()
+                            ->unwrapRedirects()
                             ->required()
                             ->maxLength(1024),
 

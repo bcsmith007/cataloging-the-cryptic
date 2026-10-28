@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasSlugRouteKey;
 use App\Models\Concerns\HasUserTracking;
+use App\Services\UrlSanitizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -74,6 +75,14 @@ class Setter extends Model
         'created_by_id',
         'updated_by_id',
     ];
+
+    /**
+     * Mutator to ensure YouTube redirect URLs are unwrapped before saving.
+     */
+    public function setPatreonUrlAttribute(?string $value): void
+    {
+        $this->attributes['patreon_url'] = UrlSanitizer::unwrapYouTubeRedirect($value);
+    }
 
     /**
      * Backward-compatible accessor for patreon_url.
