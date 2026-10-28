@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\CtcApp;
 use App\Models\User;
 use App\Services\AffiliateUrlBuilder;
+use Database\Seeders\AppSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
@@ -214,5 +215,25 @@ class AppsPageTest extends TestCase
         $response->assertSee('ctc-markdown-content', false);
         $response->assertSee('<strong>100+ handcrafted puzzles</strong>', false);
         $response->assertSee('<li>', false);
+    }
+
+    /**
+     * Test that AppSeeder populates all 10 official CTC applications idempotently.
+     */
+    public function test_app_seeder_populates_official_apps(): void
+    {
+        $this->seed(AppSeeder::class);
+
+        $this->assertSame(10, CtcApp::count());
+
+        $response = $this->get(route('apps.index'));
+        $response->assertOk();
+        $response->assertSee('Cracking the Cryptic');
+        $response->assertSee('SudokuPad');
+        $response->assertSee('Miracle Sudoku');
+        $response->assertSee('Mitchell Lee', false);
+        $response->assertSee('https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1250560/header.jpg', false);
+        $response->assertSee('https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1316390/header.jpg', false);
+        $response->assertSee('https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1613680/header.jpg', false);
     }
 }
