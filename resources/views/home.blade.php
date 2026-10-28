@@ -236,7 +236,7 @@
 
     {{-- 2. Dynamic Stats Bar Section --}}
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             <a href="{{ route('videos.index') }}" class="group rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/70 hover:border-emerald-500/50 p-6 flex flex-col items-center text-center transition-all duration-200">
                 <span class="text-3xl sm:text-4xl font-extrabold text-white group-hover:text-emerald-400 font-mono tracking-tight transition-colors">
                     {{ number_format($stats['total_videos']) }}
@@ -264,6 +264,18 @@
                 </span>
                 <span class="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-slate-300 transition-colors flex items-center gap-1">
                     <span>Distinct Setters</span>
+                    <svg class="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </span>
+            </a>
+
+            <a href="{{ route('constraints.index') }}" class="group rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/70 hover:border-emerald-500/50 p-6 flex flex-col items-center text-center transition-all duration-200">
+                <span class="text-3xl sm:text-4xl font-extrabold text-white group-hover:text-emerald-400 font-mono tracking-tight transition-colors">
+                    {{ number_format($stats['total_constraints']) }}
+                </span>
+                <span class="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-400 group-hover:text-slate-300 transition-colors flex items-center gap-1">
+                    <span>Distinct Constraints</span>
                     <svg class="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>

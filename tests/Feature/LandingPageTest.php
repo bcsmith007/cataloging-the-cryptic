@@ -88,6 +88,8 @@ class LandingPageTest extends TestCase
         $response->assertSee('Total Cataloged Videos');
         $response->assertSee('Total Puzzles Indexed');
         $response->assertSee('Distinct Setters');
+        $response->assertSee('Distinct Constraints');
+        $response->assertSee(route('constraints.index'));
     }
 
     /**

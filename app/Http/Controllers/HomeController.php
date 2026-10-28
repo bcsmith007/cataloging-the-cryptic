@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Constraint;
 use App\Models\Puzzle;
 use App\Models\Setter;
 use App\Models\Video;
@@ -27,6 +28,7 @@ class HomeController extends Controller
             'total_videos' => Video::count(),
             'total_puzzles' => Puzzle::count(),
             'total_setters' => Setter::has('puzzles')->count(),
+            'total_constraints' => Constraint::has('puzzles')->count(),
         ];
 
         $recentVideos = Video::with(['hosts', 'puzzles', 'patreonPost'])
