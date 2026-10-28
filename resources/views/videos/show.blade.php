@@ -5,23 +5,99 @@
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
 
-    {{-- Breadcrumb Navigation & Admin Edit Button --}}
-    <div class="flex items-center justify-between gap-4 flex-wrap">
-        <nav class="flex items-center space-x-2 text-xs text-slate-400 font-mono">
-            <a href="{{ route('home') }}" class="hover:text-emerald-400 transition-colors">Home</a>
-            <span>/</span>
-            <a href="{{ route('videos.index') }}" class="hover:text-emerald-400 transition-colors">Videos</a>
-            <span>/</span>
-            <span class="text-slate-200 truncate max-w-md">{{ $video->title }}</span>
-        </nav>
-        @auth
-            <a href="{{ route('filament.admin.resources.videos.edit', ['record' => $video]) }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white border border-slate-700 hover:border-emerald-500 transition-colors shadow-sm">
-                <svg class="w-3.5 h-3.5 text-emerald-400 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                <span>Edit in Admin</span>
-            </a>
-        @endauth
+    {{-- Top Navigation Header: Breadcrumbs & Video Sequence Navigation --}}
+    <div class="space-y-4">
+        {{-- Breadcrumb Navigation & Admin Edit Button --}}
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+            <nav class="flex items-center space-x-2 text-xs text-slate-400 font-mono">
+                <a href="{{ route('home') }}" class="hover:text-emerald-400 transition-colors">Home</a>
+                <span>/</span>
+                <a href="{{ route('videos.index') }}" class="hover:text-emerald-400 transition-colors">Videos</a>
+                <span>/</span>
+                <span class="text-slate-200 truncate max-w-md">{{ $video->title }}</span>
+            </nav>
+            @auth
+                <a href="{{ route('filament.admin.resources.videos.edit', ['record' => $video]) }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-emerald-600 text-slate-200 hover:text-white border border-slate-700 hover:border-emerald-500 transition-colors shadow-sm">
+                    <svg class="w-3.5 h-3.5 text-emerald-400 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Edit in Admin</span>
+                </a>
+            @endauth
+        </div>
+
+        {{-- Previous / Next Video Navigation Buttons --}}
+        <div class="flex items-center justify-between gap-3 sm:gap-4">
+            {{-- Previous Video Button --}}
+            @if ($previousVideo)
+                <a
+                    href="{{ route('videos.show', $previousVideo->slug) }}"
+                    class="group flex-1 sm:flex-initial flex items-center gap-2.5 sm:gap-3 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-white transition-all duration-200 shadow-sm max-w-[50%] sm:max-w-md"
+                    title="Previous: {{ $previousVideo->title }}"
+                >
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 group-hover:text-emerald-400 group-hover:-translate-x-0.5 transition-all shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <div class="min-w-0 text-left">
+                        <div class="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-slate-400 group-hover:text-emerald-400 transition-colors">
+                            Previous Video
+                        </div>
+                        <div class="text-xs sm:text-sm font-medium text-slate-200 group-hover:text-white truncate">
+                            {{ $previousVideo->title }}
+                        </div>
+                    </div>
+                </a>
+            @else
+                <div class="flex-1 sm:flex-initial flex items-center gap-2.5 sm:gap-3 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-900/30 border border-slate-800/40 text-slate-600 cursor-not-allowed select-none opacity-40 max-w-[50%] sm:max-w-md">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <div class="min-w-0 text-left">
+                        <div class="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-slate-600">
+                            Previous Video
+                        </div>
+                        <div class="text-xs sm:text-sm text-slate-600 truncate">
+                            None
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Next Video Button --}}
+            @if ($nextVideo)
+                <a
+                    href="{{ route('videos.show', $nextVideo->slug) }}"
+                    class="group flex-1 sm:flex-initial flex items-center justify-end text-right gap-2.5 sm:gap-3 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-white transition-all duration-200 shadow-sm max-w-[50%] sm:max-w-md ml-auto"
+                    title="Next: {{ $nextVideo->title }}"
+                >
+                    <div class="min-w-0 text-right">
+                        <div class="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-slate-400 group-hover:text-emerald-400 transition-colors">
+                            Next Video
+                        </div>
+                        <div class="text-xs sm:text-sm font-medium text-slate-200 group-hover:text-white truncate">
+                            {{ $nextVideo->title }}
+                        </div>
+                    </div>
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </a>
+            @else
+                <div class="flex-1 sm:flex-initial flex items-center justify-end text-right gap-2.5 sm:gap-3 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-900/30 border border-slate-800/40 text-slate-600 cursor-not-allowed select-none opacity-40 max-w-[50%] sm:max-w-md ml-auto">
+                    <div class="min-w-0 text-right">
+                        <div class="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-slate-600">
+                            Next Video
+                        </div>
+                        <div class="text-xs sm:text-sm text-slate-600 truncate">
+                            None
+                        </div>
+                    </div>
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </div>
+            @endif
+        </div>
     </div>
 
     {{-- Main Video Header & Player Section --}}

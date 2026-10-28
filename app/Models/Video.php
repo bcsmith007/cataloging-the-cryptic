@@ -389,4 +389,40 @@ class Video extends Model
     {
         return (bool) $this->is_finalized;
     }
+
+    /**
+     * Get the chronologically previous video in the catalog (published immediately before).
+     */
+    public function previousVideo(): ?self
+    {
+        return static::query()
+            ->where(function (Builder $query): void {
+                $query->where('published_at', '<', $this->published_at)
+                    ->orWhere(function (Builder $q): void {
+                        $q->where('published_at', '=', $this->published_at)
+                            ->where('id', '<', $this->id);
+                    });
+            })
+            ->orderByDesc('published_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * Get the chronologically next video in the catalog (published immediately after).
+     */
+    public function nextVideo(): ?self
+    {
+        return static::query()
+            ->where(function (Builder $query): void {
+                $query->where('published_at', '>', $this->published_at)
+                    ->orWhere(function (Builder $q): void {
+                        $q->where('published_at', '=', $this->published_at)
+                            ->where('id', '>', $this->id);
+                    });
+            })
+            ->orderBy('published_at', 'asc')
+            ->orderBy('id', 'asc')
+            ->first();
+    }
 }

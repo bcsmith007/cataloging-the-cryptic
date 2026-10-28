@@ -863,4 +863,86 @@ class VideoCatalogTest extends TestCase
         $responseAll->assertDontSee('Simon 50-Second Short Clip');
         $responseAll->assertDontSee('Mark 30-Second Short Clip');
     }
+
+    /**
+     * Test that Video model previousVideo() and nextVideo() work as expected.
+     */
+    public function test_video_previous_and_next_model_helpers(): void
+    {
+        $video1 = Video::factory()->create([
+            'title' => 'Video One',
+            'slug' => 'video-one',
+            'published_at' => now()->subDays(3),
+        ]);
+
+        $video2 = Video::factory()->create([
+            'title' => 'Video Two',
+            'slug' => 'video-two',
+            'published_at' => now()->subDays(2),
+        ]);
+
+        $video3 = Video::factory()->create([
+            'title' => 'Video Three',
+            'slug' => 'video-three',
+            'published_at' => now()->subDays(1),
+        ]);
+
+        // Middle video
+        $this->assertSame($video1->id, $video2->previousVideo()?->id);
+        $this->assertSame($video3->id, $video2->nextVideo()?->id);
+
+        // First / oldest video
+        $this->assertNull($video1->previousVideo());
+        $this->assertSame($video2->id, $video1->nextVideo()?->id);
+
+        // Last / newest video
+        $this->assertSame($video2->id, $video3->previousVideo()?->id);
+        $this->assertNull($video3->nextVideo());
+    }
+
+    /**
+     * Test that video show page displays previous and next navigation buttons.
+     */
+    public function test_video_show_page_displays_previous_and_next_navigation_buttons(): void
+    {
+        $olderVideo = Video::factory()->create([
+            'title' => 'Older Video Solve',
+            'slug' => 'older-video-solve',
+            'published_at' => now()->subDays(2),
+        ]);
+
+        $currentVideo = Video::factory()->create([
+            'title' => 'Current Video Solve',
+            'slug' => 'current-video-solve',
+            'published_at' => now()->subDay(),
+        ]);
+
+        $newerVideo = Video::factory()->create([
+            'title' => 'Newer Video Solve',
+            'slug' => 'newer-video-solve',
+            'published_at' => now(),
+        ]);
+
+        // When viewing middle video: both buttons are active with titles and links
+        $response = $this->get(route('videos.show', $currentVideo->slug));
+        $response->assertStatus(200);
+        $response->assertSee(route('videos.show', $olderVideo->slug));
+        $response->assertSee('Older Video Solve');
+        $response->assertSee(route('videos.show', $newerVideo->slug));
+        $response->assertSee('Newer Video Solve');
+        $response->assertSee('Previous Video');
+        $response->assertSee('Next Video');
+
+        // When viewing oldest video: no previous video (displays None)
+        $oldestResponse = $this->get(route('videos.show', $olderVideo->slug));
+        $oldestResponse->assertStatus(200);
+        $oldestResponse->assertSee(route('videos.show', $currentVideo->slug));
+        $oldestResponse->assertSee('Current Video Solve');
+
+        // When viewing newest video: no next video (displays None)
+        $newestResponse = $this->get(route('videos.show', $newerVideo->slug));
+        $newestResponse->assertStatus(200);
+        $newestResponse->assertSee(route('videos.show', $currentVideo->slug));
+        $newestResponse->assertSee('Current Video Solve');
+    }
 }

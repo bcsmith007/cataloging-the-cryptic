@@ -183,6 +183,9 @@ class VideoController extends Controller
             ->where('slug', $slug)
             ->firstOrFail();
 
-        return view('videos.show', compact('video'));
+        $previousVideo = $video->previousVideo();
+        $nextVideo = $video->nextVideo();
+
+        return view('videos.show', compact('video', 'previousVideo', 'nextVideo'));
     }
 }
