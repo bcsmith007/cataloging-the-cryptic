@@ -8,6 +8,7 @@ use App\Filament\Resources\PatreonPosts\RelationManagers\VideosRelationManager;
 use App\Filament\Resources\PatreonPosts\Schemas\PatreonPostForm;
 use App\Models\Bookmark;
 use App\Models\Host;
+use App\Models\PatreonPost;
 use App\Models\Video;
 use App\Services\YouTubeService;
 use Filament\Actions\Action;
@@ -72,6 +73,15 @@ class VideoForm
                                 ->searchable()
                                 ->preload()
                                 ->nullable()
+                                ->live()
+                                ->afterStateUpdated(function (?int $state, callable $set, callable $get): void {
+                                    if (filled($state)) {
+                                        $post = PatreonPost::find($state);
+                                        if ($post?->patreon_url && blank($get('patreon_post_url'))) {
+                                            $set('patreon_post_url', $post->patreon_url);
+                                        }
+                                    }
+                                })
                                 ->visible(fn ($livewire) => ! ($livewire instanceof VideosRelationManager))
                                 ->createOptionForm(PatreonPostForm::schemaComponents())
                                 ->createOptionAction(function (Action $action): Action {
@@ -108,8 +118,18 @@ class VideoForm
                                 ->url()
                                 ->unwrapRedirects()
                                 ->maxLength(512)
+                                ->default(function ($livewire): ?string {
+                                    if ($livewire instanceof VideosRelationManager) {
+                                        $owner = $livewire->getOwnerRecord();
+                                        if ($owner instanceof PatreonPost) {
+                                            return $owner->patreon_url;
+                                        }
+                                    }
+
+                                    return null;
+                                })
                                 ->helperText('Direct URL if not linked to a Patreon post record.')
-                                ->visible(fn (callable $get) => $get('access_level') === 'exclusive' || filled($get('patreon_post_id'))),
+                                ->visible(fn (callable $get, $livewire) => $get('access_level') === 'exclusive' || filled($get('patreon_post_id')) || ($livewire instanceof VideosRelationManager)),
                         ]),
 
                         Grid::make(2)->schema([

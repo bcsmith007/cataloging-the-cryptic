@@ -695,6 +695,7 @@ class AdminPanelTest extends TestCase
 
         $this->assertDatabaseHas('videos', [
             'patreon_post_id' => $post->id,
+            'patreon_post_url' => $post->patreon_url,
             'title' => 'Exclusive Masterclass Video',
             'access_level' => 'exclusive',
             'video_type' => 'youtube',

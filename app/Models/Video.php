@@ -37,6 +37,18 @@ class Video extends Model
                 $video->slug = static::generateSlug($source);
             }
         });
+
+        static::saving(function (Video $video): void {
+            if (filled($video->patreon_post_id) && blank($video->patreon_post_url)) {
+                $post = $video->relationLoaded('patreonPost')
+                    ? $video->patreonPost
+                    : PatreonPost::find($video->patreon_post_id);
+
+                if ($post?->patreon_url) {
+                    $video->patreon_post_url = $post->patreon_url;
+                }
+            }
+        });
     }
 
     /**

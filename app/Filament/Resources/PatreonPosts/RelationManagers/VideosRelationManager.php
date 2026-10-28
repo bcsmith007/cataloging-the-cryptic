@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PatreonPosts\RelationManagers;
 
 use App\Filament\Resources\Videos\Schemas\VideoForm;
+use App\Models\PatreonPost;
 use App\Models\Video;
 use Filament\Actions\AssociateAction;
 use Filament\Actions\BulkActionGroup;
@@ -95,11 +96,29 @@ class VideosRelationManager extends RelationManager
                     ->label('Add New Video to Post')
                     ->modalHeading('Add New Video to Patreon Post')
                     ->modalWidth('5xl')
-                    ->slideOver(),
+                    ->slideOver()
+                    ->mutateDataUsing(function (array $data): array {
+                        if (blank($data['patreon_post_url'] ?? null)) {
+                            /** @var PatreonPost $post */
+                            $post = $this->getOwnerRecord();
+                            if ($post?->patreon_url) {
+                                $data['patreon_post_url'] = $post->patreon_url;
+                            }
+                        }
+
+                        return $data;
+                    }),
                 AssociateAction::make()
                     ->preloadRecordSelect()
                     ->label('Attach Existing Video')
-                    ->modalHeading('Attach Existing Video to Patreon Post'),
+                    ->modalHeading('Attach Existing Video to Patreon Post')
+                    ->after(function (Video $record): void {
+                        /** @var PatreonPost $post */
+                        $post = $this->getOwnerRecord();
+                        if ($post?->patreon_url && blank($record->patreon_post_url)) {
+                            $record->update(['patreon_post_url' => $post->patreon_url]);
+                        }
+                    }),
             ])
             ->recordActions([
                 EditAction::make()

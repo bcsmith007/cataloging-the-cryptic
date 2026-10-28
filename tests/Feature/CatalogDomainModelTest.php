@@ -383,4 +383,40 @@ class CatalogDomainModelTest extends TestCase
         $puzzle->delete();
         $this->assertDatabaseMissing('puzzle_links', ['puzzle_id' => $puzzleId]);
     }
+
+    /**
+     * Test that video attached to PatreonPost automatically inherits fallback Patreon URL when created or saved.
+     */
+    public function test_video_attached_to_patreon_post_inherits_patreon_url(): void
+    {
+        $post = PatreonPost::create([
+            'title' => 'Sunday Masterclass',
+            'slug' => 'sunday-masterclass',
+            'patreon_url' => 'https://www.patreon.com/posts/sunday-masterclass-987654',
+            'published_at' => now(),
+        ]);
+
+        // When created with patreon_post_id and blank patreon_post_url
+        $video = Video::create([
+            'patreon_post_id' => $post->id,
+            'title' => 'Attached Video',
+            'video_type' => 'youtube',
+            'access_level' => 'exclusive',
+            'published_at' => now(),
+        ]);
+
+        $this->assertSame('https://www.patreon.com/posts/sunday-masterclass-987654', $video->fresh()->patreon_post_url);
+
+        // When created with explicit custom patreon_post_url, custom URL is preserved
+        $customVideo = Video::create([
+            'patreon_post_id' => $post->id,
+            'title' => 'Custom URL Video',
+            'video_type' => 'youtube',
+            'access_level' => 'exclusive',
+            'patreon_post_url' => 'https://www.patreon.com/posts/custom-url-override',
+            'published_at' => now(),
+        ]);
+
+        $this->assertSame('https://www.patreon.com/posts/custom-url-override', $customVideo->fresh()->patreon_post_url);
+    }
 }
