@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\User;
 use App\Models\Video;
 use App\Models\YouTubeSyncLog;
+use App\Services\CatalogStatsService;
 use App\Services\YouTubeService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
@@ -373,6 +374,7 @@ class SyncYouTubeVideos extends Command
 
         if (! $dryRun) {
             Cache::put('youtube_sync_last_run_at', now()->toIso8601String());
+            CatalogStatsService::flushCache();
         }
 
         return self::SUCCESS;

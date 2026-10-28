@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Constraint;
 use App\Models\Puzzle;
 use App\Models\Video;
+use App\Services\CatalogStatsService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -697,5 +698,46 @@ class CatalogStatsTest extends TestCase
         $observations = $response->viewData('observations');
         $this->assertStringNotContainsString('Other', $observations['constraints']);
         $this->assertStringContainsString('Thermo Lines', $observations['constraints']);
+    }
+
+    /**
+     * Test that CatalogStatsService caches home and dashboard stats and automatically invalidates them when catalog models change.
+     */
+    public function test_catalog_stats_service_invalidates_cached_stats_when_models_change(): void
+    {
+        Video::factory()->create([
+            'title' => 'Initial Video',
+            'view_count' => 1000,
+            'published_at' => now()->subDay(),
+        ]);
+
+        // Prime both caches via HTTP requests
+        $homeResponse = $this->get(route('home'));
+        $homeResponse->assertStatus(200);
+        $this->assertSame(1, $homeResponse->viewData('stats')['total_videos']);
+
+        $statsResponse = $this->get(route('stats'));
+        $statsResponse->assertStatus(200);
+        $this->assertSame(1, $statsResponse->viewData('kpis')['total_videos']);
+
+        $this->assertTrue(Cache::has(CatalogStatsService::HOME_CACHE_KEY));
+        $this->assertTrue(Cache::has(CatalogStatsService::DASHBOARD_CACHE_KEY));
+
+        // Creating a new Video must automatically flush both caches
+        Video::factory()->create([
+            'title' => 'Second Video',
+            'view_count' => 2000,
+            'published_at' => now(),
+        ]);
+
+        $this->assertFalse(Cache::has(CatalogStatsService::HOME_CACHE_KEY));
+        $this->assertFalse(Cache::has(CatalogStatsService::DASHBOARD_CACHE_KEY));
+
+        // Subsequent requests reflect the updated counts
+        $updatedHome = $this->get(route('home'));
+        $this->assertSame(2, $updatedHome->viewData('stats')['total_videos']);
+
+        $updatedStats = $this->get(route('stats'));
+        $this->assertSame(2, $updatedStats->viewData('kpis')['total_videos']);
     }
 }

@@ -77,6 +77,11 @@ class UrlSanitizer
             $target = urldecode($target);
         }
 
+        // Only allow http:// or https:// destination URLs to prevent unsafe URI scheme injection
+        if (! preg_match('#^https?://#i', $target)) {
+            return $trimmed;
+        }
+
         // Recursively unwrap if target is itself another redirect
         return static::unwrapYouTubeRedirect($target);
     }

@@ -1,10 +1,12 @@
+# Project Engineering Rules — Cataloging the Cryptic
 
 ## 1. Definition of Done (DoD)
 You are not permitted to close out a task or signal completion until the following conditions are met completely:
 
-1. **Compilation Check:** Code must pass standard static analysis checks with zero syntax errors.
-2. **Automated Testing:** You must write a corresponding Feature/Integration test asserting the new logic. If the component modifies a tenant table, you must write a negative integration test proving that a separate, un-authenticated tenant cannot access or view that resource row.
-3. **Terminal Verification:** You must execute `php artisan test` inside the terminal window and verify that the entire suite passes with 100% success before declaring victory.
+1. **Code Formatting & Static Checks:** Run `vendor/bin/pint --dirty --format agent` whenever any PHP file is created or modified so all code matches project conventions with zero syntax errors.
+2. **Automated Testing:** Write or update corresponding Feature/Unit tests asserting changed behavior and important failure modes.
+3. **Terminal Verification:** Execute `php artisan test --compact` inside the terminal and verify that the test suite passes with 100% success before declaring completion.
+4. **Dependency Security Audit:** When modifying `composer.json` or `package.json`, run `composer audit` and `npm audit` and verify zero unresolved advisories.
 
 ---
 
@@ -14,7 +16,7 @@ Don't assume. Don't hide confusion. Surface tradeoffs.
 
 Before implementing:
 
-State your assumptions explicitly. If uncertain, ask.
+* State your assumptions explicitly. If uncertain, ask.
 * If multiple interpretations exist, present them - don't pick silently.
 * If a simpler approach exists, say so. Push back when warranted.
 * If something is unclear, stop. Name what's confusing. Ask.
@@ -26,7 +28,7 @@ State your assumptions explicitly. If uncertain, ask.
 Minimum code that solves the problem. Nothing speculative.
 
 * No features beyond what was asked.
-* No abstractions for single-use code.
+* No abstractions for single-use code unless extracting a clear domain boundary (such as a testable service class).
 * No "flexibility" or "configurability" that wasn't requested.
 * No error handling for impossible scenarios.
 * If you write 200 lines and it could be 50, rewrite it.
@@ -41,10 +43,10 @@ Touch only what you must. Clean up only your own mess.
 
 When editing existing code:
 
-* Don't "improve" adjacent code, comments, or formatting.
+* Don't "improve" adjacent code, comments, or formatting unrelated to the task.
 * Don't refactor things that aren't broken.
 * Match existing style, even if you'd do it differently.
-* If you notice unrelated dead code, mention it - don't delete it.
+* If you notice unrelated dead code, mention it - don't delete it without asking.
 
 When your changes create orphans:
 
@@ -61,17 +63,15 @@ Define success criteria. Loop until verified.
 
 Transform tasks into verifiable goals:
 
-* "Add validation" → "Write tests for invalid inputs, then make them pass"
-* "Fix the bug" → "Write a test that reproduces it, then make it pass"
-* "Refactor X" → "Ensure tests pass before and after"
+* "Add validation" -> "Write tests for invalid inputs, then make them pass"
+* "Fix the bug" -> "Write a test that reproduces it, then make it pass"
+* "Refactor X" -> "Ensure tests pass before and after"
 
 For multi-step tasks, state a brief plan:
 
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+1. [Step] -> verify: [check]
+2. [Step] -> verify: [check]
+3. [Step] -> verify: [check]
 
 ---
 
@@ -80,38 +80,35 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 Code should be clean, well documented, and easy to understand.
 
 Documentation:
-* All code should be well documented
-* Documentation should follow PHPDoc formatting
-* Documentation should include explanations of the purpose of the code, how it works, and how to use it
-* Documentation should be kept up to date with code changes
-* Documentation should be concise but comprehensive
-* If a file is not currently documented, you should document it
-* If you don't change a code section, don't change the documentation
+* All code should be well documented using PHPDoc blocks with explicit parameter and return types (including array shape annotations where helpful).
+* Documentation should include explanations of the purpose of the code and how it works.
+* Documentation should be kept up to date with code changes.
+* If you don't change a code section, preserve existing comments and docstrings.
 
 Consistency:
-* All code should follow the same coding style
-* All code should use the same naming conventions
-* All code should use the same formatting
-* All code should use the same error handling strategy
-* All code should use the same testing strategy
+* Always use curly braces for control structures, even for single-line bodies.
+* Use explicit return type declarations and type hints for all method parameters.
+* Follow existing naming conventions, error handling, and PHPUnit testing patterns.
 
 Code and Site Style:
-* Do not use emojis anywere in the code, site or documentation
-* If you see an emoji, remove it and replace with appropriate text
+* Do not use emojis anywhere in the code, site, or documentation.
+* If you see an emoji, remove it and replace it with appropriate text.
 
 ---
 
 ## 7. File Locations
 
-* All files for this project are in the `/Users/bcsmith/Sites/ctc` directory
-* No other files should be used, edited, or referenced without explicit permission
+* All project files reside in the `/Users/bcsmith/Sites/ctc` directory.
+* Stick to the existing directory structure; do not create new top-level directories without approval.
 
 ---
 
-## 8. Environments, Security Headers, and Front-End Assets
+## 8. Environments, Security Hardening, and Front-End Assets
 
-* **Scope Security Headers to Production Only:** In `app/Http/Middleware/SetSecurityHeaders.php`, bypass security headers in non-production environments (`if (! app()->isProduction()) { return $next($request); }`) to avoid breaking local HTTP development (e.g., `ctc.test`).
-* **Permissions-Policy:** Ensure deprecated or non-standard directives such as `browsing-topics=()` are never used.
-* **Standardize Front-End Assets with @vite:** Never hardcode paths to `/build/assets/...` in Blade templates. Always use `@vite(['resources/css/app.css', 'resources/js/app.js'])`. Completely remove any Tailwind Play CDN script tag.
-* **Bundle Dependencies Locally:** All third-party client-side libraries (e.g., Chart.js) must be installed via npm (`package.json`) and imported/initialized inside `resources/js/app.js` rather than loading external CDN scripts that violate the production Content Security Policy.
-
+* **PHP2Shell & Runtime Requirements (CVE-2026-109618 / CVE-2026-109619):** Enforce patched PHP versions (`^8.3.36 || ^8.4.27 || ^8.5.12`) in `composer.json` and reject `PHP_SESSION_UPLOAD_PROGRESS` payloads in `SetSecurityHeaders`.
+* **Scope Security Headers to Production Only:** In `app/Http/Middleware/SetSecurityHeaders.php`, bypass response security headers in non-production environments (`if (! app()->isProduction()) { return $next($request); }`) to avoid breaking local HTTP development (e.g., `ctc.test`).
+* **Permissions-Policy:** Never include deprecated or non-standard directives such as `browsing-topics=()`.
+* **Safe Markdown Rendering:** When rendering database fields via `{!! Str::markdown(...) !!}`, always pass `['html_input' => 'strip', 'allow_unsafe_links' => false]` to prevent stored XSS.
+* **Unwrap YouTube Redirects (`UrlSanitizer`):** Ensure external URL inputs and model URL attributes unwrap YouTube redirect links via `App\Services\UrlSanitizer` and only unwrap `http://` or `https://` target destinations.
+* **Standardize Front-End Assets with `@vite`:** Never hardcode paths to `/build/assets/...` in Blade templates. Always use `@vite(['resources/css/app.css', 'resources/js/app.js'])`. Never use the Tailwind Play CDN `<script>` tag.
+* **Bundle Dependencies Locally:** All client-side dependencies (Chart.js, KaTeX, Alpine utilities) must be installed via npm (`package.json`) and imported in `resources/js/app.js` rather than loading external CDN scripts that violate the production Content Security Policy.

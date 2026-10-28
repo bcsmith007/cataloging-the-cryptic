@@ -4,6 +4,13 @@ namespace App\Providers;
 
 use App\Http\Responses\LoginResponse;
 use App\Http\Responses\RegistrationResponse;
+use App\Models\Category;
+use App\Models\Constraint;
+use App\Models\Puzzle;
+use App\Models\Setter;
+use App\Models\Video;
+use App\Models\VideoPuzzle;
+use App\Services\CatalogStatsService;
 use App\Services\TimezoneService;
 use App\Services\UrlSanitizer;
 use Carbon\Carbon;
@@ -36,6 +43,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Model::shouldBeStrict(! app()->isProduction());
+
+        foreach ([Video::class, Puzzle::class, Setter::class, Constraint::class, Category::class, VideoPuzzle::class] as $modelClass) {
+            $modelClass::saved(fn () => CatalogStatsService::flushCache());
+            $modelClass::deleted(fn () => CatalogStatsService::flushCache());
+        }
 
         // Carbon macro to convert any date instance to the active user timezone
         Carbon::macro('inUserTimezone', function (?string $timezone = null) {

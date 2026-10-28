@@ -6,8 +6,7 @@ use App\Models\Constraint;
 use App\Models\Video;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Controller handling public constraint directory and constraint detail views.
@@ -26,88 +25,104 @@ class ConstraintController extends Controller
         }
         $search = trim($request->query('q', $request->query('search', '')));
 
-        $constraints = Constraint::query()
+        $videosCountSubquery = DB::table('puzzle_constraints')
+            ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_constraints.puzzle_id')
+            ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
+            ->whereColumn('puzzle_constraints.constraint_id', 'constraints.id')
+            ->whereNotNull('videos.published_at')
+            ->selectRaw('COUNT(DISTINCT videos.id)');
+
+        $firstPublishedSubquery = DB::table('puzzle_constraints')
+            ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_constraints.puzzle_id')
+            ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
+            ->whereColumn('puzzle_constraints.constraint_id', 'constraints.id')
+            ->whereNotNull('videos.published_at')
+            ->selectRaw('MIN(videos.published_at)');
+
+        $recentPublishedSubquery = DB::table('puzzle_constraints')
+            ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_constraints.puzzle_id')
+            ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
+            ->whereColumn('puzzle_constraints.constraint_id', 'constraints.id')
+            ->whereNotNull('videos.published_at')
+            ->selectRaw('CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX(videos.published_at) ELSE NULL END');
+
+        $query = Constraint::query()
             ->withCount('puzzles')
-            ->with([
-                'puzzles' => function ($query) {
-                    $query->with(['videos' => function ($vq) {
-                        $vq->orderBy('published_at', 'asc')->orderBy('id', 'asc');
-                    }]);
-                },
-            ])
-            ->get()
-            ->map(function (Constraint $constraint) {
-                $puzzleVideos = $constraint->puzzles->flatMap(function ($puzzle) {
-                    return $puzzle->videos->map(function ($video) use ($puzzle) {
-                        return [
-                            'puzzle' => $puzzle,
-                            'video' => $video,
-                            'published_at' => $video->published_at,
-                        ];
-                    });
-                })->filter(fn ($item) => ! is_null($item['published_at']))
-                    ->sortBy('published_at')
-                    ->values();
-
-                $distinctVideos = $puzzleVideos->unique('video.id')->values();
-
-                $first = $puzzleVideos->first();
-                $recent = $distinctVideos->count() > 1 ? $puzzleVideos->last() : null;
-
-                $constraint->videos_count = $distinctVideos->count();
-                $constraint->first_puzzle = $first['puzzle'] ?? null;
-                $constraint->first_video = $first['video'] ?? null;
-                $constraint->first_date = $first['published_at'] ?? null;
-
-                $constraint->recent_puzzle = $recent['puzzle'] ?? null;
-                $constraint->recent_video = $recent['video'] ?? null;
-                $constraint->recent_date = $recent['published_at'] ?? null;
-
-                return $constraint;
-            });
+            ->addSelect([
+                'videos_count' => $videosCountSubquery,
+                'first_published_at' => $firstPublishedSubquery,
+                'recent_published_at' => $recentPublishedSubquery,
+            ]);
 
         if ($search !== '') {
-            $constraints = $constraints->filter(function (Constraint $c) use ($search) {
-                return str_contains(Str::lower($c->name), Str::lower($search))
-                    || str_contains(Str::lower($c->description ?? ''), Str::lower($search));
-            })->values();
+            $term = '%'.mb_strtolower($search).'%';
+            $query->where(function ($q) use ($term): void {
+                $q->whereRaw('LOWER(constraints.name) LIKE ?', [$term])
+                    ->orWhereRaw("LOWER(COALESCE(constraints.description, '')) LIKE ?", [$term]);
+            });
         }
 
-        $constraints = match ($sort) {
-            'name' => $direction === 'asc'
-                ? $constraints->sortBy(fn ($c) => Str::lower($c->name))->values()
-                : $constraints->sortByDesc(fn ($c) => Str::lower($c->name))->values(),
-            'puzzles' => $direction === 'asc'
-                ? $constraints->sortBy('puzzles_count')->values()
-                : $constraints->sortByDesc('puzzles_count')->values(),
-            'first' => $direction === 'asc'
-                ? $constraints->sortBy(fn ($c) => $c->first_date?->timestamp ?? PHP_INT_MAX)->values()
-                : $constraints->sortByDesc(fn ($c) => $c->first_date?->timestamp ?? 0)->values(),
-            'recent' => $direction === 'asc'
-                ? $constraints->sortBy(fn ($c) => $c->recent_date?->timestamp ?? PHP_INT_MAX)->values()
-                : $constraints->sortByDesc(fn ($c) => $c->recent_date?->timestamp ?? 0)->values(),
-            default => $direction === 'asc'
-                ? $constraints->sortBy('videos_count')->values()
-                : $constraints->sortByDesc('videos_count')->values(),
+        match ($sort) {
+            'name' => $query
+                ->orderByRaw('LOWER(constraints.name) '.($direction === 'asc' ? 'ASC' : 'DESC'))
+                ->orderBy('constraints.id', 'asc'),
+            'puzzles' => $query
+                ->orderBy('puzzles_count', $direction)
+                ->orderByRaw('LOWER(constraints.name) ASC')
+                ->orderBy('constraints.id', 'asc'),
+            'first' => $query
+                ->orderByRaw('CASE WHEN first_published_at IS NULL THEN 1 ELSE 0 END ASC')
+                ->orderBy('first_published_at', $direction)
+                ->orderBy('constraints.id', 'asc'),
+            'recent' => $query
+                ->orderByRaw('CASE WHEN recent_published_at IS NULL THEN 1 ELSE 0 END ASC')
+                ->orderBy('recent_published_at', $direction)
+                ->orderBy('constraints.id', 'asc'),
+            default => $query
+                ->orderBy('videos_count', $direction)
+                ->orderByRaw('LOWER(constraints.name) ASC')
+                ->orderBy('constraints.id', 'asc'),
         };
 
-        $perPage = 20;
-        $currentPage = LengthAwarePaginator::resolveCurrentPage('page');
-        $totalConstraints = $constraints->count();
-        $currentPageItems = $constraints->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $constraints = $query->paginate(20)->withQueryString();
 
-        $paginatedConstraints = new LengthAwarePaginator(
-            $currentPageItems,
-            $totalConstraints,
-            $perPage,
-            $currentPage,
-            [
-                'path' => LengthAwarePaginator::resolveCurrentPath(),
-                'query' => $request->query(),
-            ]
-        );
+        $constraints->getCollection()->load([
+            'puzzles' => function ($puzzleQuery): void {
+                $puzzleQuery->with(['videos' => function ($videoQuery): void {
+                    $videoQuery->orderBy('published_at', 'asc')->orderBy('id', 'asc');
+                }]);
+            },
+        ]);
 
-        $constraints = $paginatedConstraints;
+        $constraints->getCollection()->transform(function (Constraint $constraint): Constraint {
+            $puzzleVideos = $constraint->puzzles->flatMap(function ($puzzle) {
+                return $puzzle->videos->map(function ($video) use ($puzzle): array {
+                    return [
+                        'puzzle' => $puzzle,
+                        'video' => $video,
+                        'published_at' => $video->published_at,
+                    ];
+                });
+            })->filter(fn (array $item): bool => ! is_null($item['published_at']))
+                ->sortBy('published_at')
+                ->values();
+
+            $distinctVideos = $puzzleVideos->unique('video.id')->values();
+
+            $first = $puzzleVideos->first();
+            $recent = $distinctVideos->count() > 1 ? $puzzleVideos->last() : null;
+
+            $constraint->setAttribute('videos_count', $distinctVideos->count());
+            $constraint->setAttribute('first_puzzle', $first['puzzle'] ?? null);
+            $constraint->setAttribute('first_video', $first['video'] ?? null);
+            $constraint->setAttribute('first_date', $first['published_at'] ?? null);
+
+            $constraint->setAttribute('recent_puzzle', $recent['puzzle'] ?? null);
+            $constraint->setAttribute('recent_video', $recent['video'] ?? null);
+            $constraint->setAttribute('recent_date', $recent['published_at'] ?? null);
+
+            return $constraint;
+        });
 
         return view('constraints.index', compact('constraints', 'sort', 'direction', 'search'));
     }
@@ -117,28 +132,37 @@ class ConstraintController extends Controller
      */
     public function show(Constraint $constraint): View
     {
-        $allVideos = Video::query()
-            ->whereHas('puzzles.constraints', function ($query) use ($constraint) {
+        $baseVideosQuery = Video::query()
+            ->whereHas('puzzles.constraints', function ($query) use ($constraint): void {
                 $query->where('constraints.id', $constraint->id);
             })
-            ->whereNotNull('published_at')
-            ->orderBy('published_at', 'asc')
-            ->orderBy('id', 'asc')
-            ->get();
+            ->whereNotNull('published_at');
 
-        $totalVideos = $allVideos->count();
-        $firstVideo = $allVideos->first();
-        $latestVideo = $totalVideos > 1 ? $allVideos->last() : $firstVideo;
-        $totalViews = (int) $allVideos->sum('view_count');
+        $aggregates = (clone $baseVideosQuery)
+            ->toBase()
+            ->selectRaw('COUNT(*) as total_videos, COALESCE(SUM(view_count), 0) as total_views')
+            ->first();
+
+        $totalVideos = (int) ($aggregates->total_videos ?? 0);
+        $totalViews = (int) ($aggregates->total_views ?? 0);
+
+        $firstVideo = $totalVideos > 0
+            ? (clone $baseVideosQuery)->orderBy('published_at', 'asc')->orderBy('id', 'asc')->first()
+            : null;
+
+        $latestVideo = $totalVideos > 1
+            ? (clone $baseVideosQuery)->orderByDesc('published_at')->orderByDesc('id')->first()
+            : $firstVideo;
+
         $puzzlesCount = $constraint->puzzles()->count();
 
         $videos = Video::query()
-            ->whereHas('puzzles.constraints', function ($query) use ($constraint) {
+            ->whereHas('puzzles.constraints', function ($query) use ($constraint): void {
                 $query->where('constraints.id', $constraint->id);
             })
             ->with([
                 'hosts',
-                'puzzles' => function ($query) {
+                'puzzles' => function ($query): void {
                     $query->with(['setters', 'category', 'constraints']);
                 },
             ])

@@ -1,55 +1,89 @@
 # Security & Defensive Implementation Standards
-**Project:** Cracking the Cryptic Catalog (catalogingthecryptic.com)  
-**Stack:** Laravel 12, PHP 8.5, PostgreSQL, Filament v3, Livewire 3, Alpine.js, Tailwind CSS, Meilisearch
+**Project:** Cataloging the Cryptic (`catalogingthecryptic.com`)  
+**Stack:** Laravel 13, PHP 8.5 (8.5.12+), PostgreSQL / SQLite, Filament v5, Livewire 4, Alpine.js, Tailwind CSS v4, Chart.js, KaTeX
 
 ---
 
-## 1. Environment & API Key Protection
-* **Server-Side Exclusivity:** All external API communications—including YouTube Data API v3, Patreon scraping, and SudokuPad metadata resolution—must occur strictly server-side within queued jobs, console commands, or dedicated service classes.
-* **No Client Leaks:** Never prefix third-party secrets with `VITE_` or expose `YOUTUBE_API_KEY` to client-side bundles.
-* **External URL Validation & SSRF Prevention:** When fetching puzzle links or expanding shortened URLs found in video descriptions, strictly validate URLs using `filter_var($url, FILTER_VALIDATE_URL)`. Restrict outbound requests to `http` and `https` schemes and reject private IP ranges (127.0.0.1, 10.0.0.0/8, 192.168.0.0/16, 169.254.169.254).
-* **API Quota & Fault Resilience:** Wrap all YouTube Data API calls in explicit try-catch blocks handling HTTP 403 (Quota Exceeded) and HTTP 429 without throwing uncaught exceptions or terminating background sync queues.
+## 1. PHP Runtime Hardening & PHP2Shell Mitigation (CVE-2026-109618 / CVE-2026-109619)
+**PHP2Shell** (**CVE-2026-109618** and **CVE-2026-109619**, CVSS 9.2 Critical) is a family of unauthenticated Remote Code Execution (RCE) and memory disclosure vulnerabilities in the core PHP runtime engine:
+* **CVE-2026-109618:** Out-of-memory (OOM) state corruption during multipart/request parsing leaving internal structures partially initialized.
+* **CVE-2026-109619:** Use-after-free (UAF) in worker process state management (specifically via PHP's session upload-progress tracking and PHP 8.5 fatal error backtraces) allowing subsequent requests on the same PHP-FPM worker to read or manipulate freed request memory.
+
+### Mandatory Runtime & Platform Controls
+1. **Patched PHP Runtime Requirement:**
+   * All local, staging, and production environments **must** run a patched PHP binary: **PHP >= 8.5.12** (or `>= 8.4.27` / `>= 8.3.36`).
+   * `composer.json` enforces `"php": "^8.3.36 || ^8.4.27 || ^8.5.12"` so deployments fail fast if a host runs an unpatched PHP binary.
+   * After upgrading PHP packages on any server, **restart `php-fpm`** (or the web server process manager) immediately to flush worker memory states.
+2. **Global `php.ini` / PHP-FPM Pool Hardening:**
+   Configure the following directives globally in `php.ini` or `php-fpm` pool definitions (runtime `ini_set()` or `.user.ini` overrides execute too late in the request lifecycle):
+   ```ini
+   session.upload_progress.enabled = 0
+   fatal_error_backtraces = 0
+   register_argc_argv = 0
+   expose_php = Off
+   post_max_size = 8M
+   max_input_vars = 1000
+   ```
+3. **Application-Level Defense-in-Depth (`SetSecurityHeaders` Middleware):**
+   * `app/Http/Middleware/SetSecurityHeaders.php` explicitly rejects any HTTP request containing a `PHP_SESSION_UPLOAD_PROGRESS` query parameter, body field, or cookie with `HTTP 400 Bad Request`.
 
 ---
 
-## 2. Eloquent, PostgreSQL & Data Layer
-* **Enforce Strict Eloquent Execution:** Enforce `Model::shouldBeStrict(! app()->isProduction());` within `app/Providers/AppServiceProvider.php` to immediately catch lazy-loading (N+1), unguarding violations, and missing attributes during development.
-* **Mass Assignment Defense:** Define explicit `$fillable` arrays on every model; do not use unconstrained `$guarded = []`.
-* **SQL Injection & Raw Queries:** When utilizing raw PostgreSQL clauses (`to_tsvector`, full-text operators, or custom expressions), never concatenate unvalidated user input. Always use parameterized PDO bindings:
-  `$query->whereRaw("to_tsvector('english', title) @@ plainto_tsquery('english', ?)", [$search]);`
-* **PostgreSQL Constraints:** Enforce data integrity at the database engine level via unique indexes (e.g., `youtube_id` on videos, slug uniqueness, composite unique constraints on many-to-many pivots).
+## 2. Known Laravel, Livewire & Symfony Advisory Mitigations
+* **Livewire Authorization & Synthesis Hardening (`GHSA-mhf7-xp6r-6qrc` / `PKSA-xhv3-nr94-h8db`):**
+  * Maintain `livewire/livewire` at **`>= 4.4.8`** to prevent authorization bypasses in `#[Authorize]` via reordered parameter keys and `#[Json]` execution order.
+* **Symfony Mime Header Injection (`CVE-2026-45070` / `PKSA-wtxr-p26d-nn42`):**
+  * Maintain `symfony/mime` (and related `symfony/*` packages) at **`>= 8.1.10`** to prevent email header injection via non-token characters in MIME parameter names.
+* **Query String `argv` Injection (`CVE-2024-52301`):**
+  * Keep `register_argc_argv = 0` in `php.ini` and `laravel/framework` at **`>= 13.33.0`** so crafted query strings cannot manipulate environment detection when running under web SAPIs.
 
 ---
 
-## 3. Filament v3 & Admin Panel Hardening
-* **Explicit Panel Gate Contract:** Implement `Filament\Models\Contracts\FilamentUser` on the User model and register explicit Laravel Policies for every administrative resource (Videos, Puzzles, Setters, Constraints). Never rely purely on UI visibility for access control.
-* **Form Upload Sanitization:** Secure any file uploads by validating MIME types, enforcing maximum file sizes, and storing uploads on private or non-executable disks.
+## 3. Environment & API Key Protection
+* **Server-Side Exclusivity:** All external API communications—including YouTube Data API v3 (`YouTubeService`) and Patreon post metadata fetching (`PatreonService`)—must occur strictly server-side within console commands or dedicated service classes.
+* **No Client Leaks:** Never prefix third-party secrets with `VITE_` or expose `YOUTUBE_API_KEY` to client-side bundles. Read secrets exclusively through `config('services.youtube.key')` rather than `env()` outside configuration files.
+* **External URL Sanitization & Scheme Validation (`UrlSanitizer`):**
+  * All YouTube redirect URLs (`youtube.com/redirect?q=...`) pasted into forms or model attributes are automatically unwrapped via `App\Services\UrlSanitizer`.
+  * `UrlSanitizer::unwrapYouTubeRedirect()` strictly validates that extracted target URLs begin with `http://` or `https://`, rejecting `javascript:`, `data:`, `vbscript:`, or other unsafe URI schemes.
+* **API Quota & Fault Resilience:** Wrap all YouTube Data API and Patreon API calls in explicit `try-catch` blocks with HTTP timeouts (`timeout(8)`) and graceful fallback handling so quota errors (HTTP 403) or rate limits (HTTP 429) never leak stack traces or crash sync runs.
 
 ---
 
-## 4. Livewire & Front-End Security
-* **Livewire Public Properties:** Livewire public properties are client-editable. Never rely on a client-submitted ID or state without running server-side model checks and Laravel Authorization (`$this->authorize(...)`) inside the mutation action.
-* **Avoid Model Hydration Traps:** Avoid binding entire sensitive Eloquent models to Livewire public properties. Prefer binding primitive properties (`string`, `int`, `bool`) to prevent wire tampering.
-* **Blade XSS Prevention:** Render video descriptions, setter notes, and puzzle rules using escaped Blade tags (`{{ $text }}`). Strictly avoid unescaped Blade (`{!! $text !!}`) and Alpine `x-html` unless the raw HTML is explicitly parsed through a backend sanitizer whitelist (e.g., `Purifier`).
+## 4. Eloquent, Database & Data Layer
+* **Enforce Strict Eloquent Execution:** `Model::shouldBeStrict(! app()->isProduction());` is enabled in `app/Providers/AppServiceProvider.php` to catch lazy-loading (N+1) queries, mass-assignment of unfillable attributes, and access to missing attributes during development and testing.
+* **Mass Assignment Defense:** Define explicit `$fillable` arrays on every Eloquent model; never use unconstrained `$guarded = []`.
+* **SQL Injection & Parameterized Bindings:** Never concatenate user input into `whereRaw`, `selectRaw`, or `orderByRaw`. Always pass user-supplied search strings via parameterized bindings (`whereRaw('LOWER(title) LIKE ?', [$term])`) and map sort keys/directions against strict allowlists (`match ($sort)` and `in_array($direction, ['asc', 'desc'], true)`).
 
 ---
 
-## 5. Meilisearch Security
-* **Key Scoping:** The `MEILI_MASTER_KEY` is reserved strictly for backend synchronization via Laravel Scout.
-* **Front-End Search Isolation:** If direct browser-to-engine querying is introduced, generate and supply a scoped, read-only search key restricted to index-level query operations.
+## 5. Filament v5 & Admin Panel Hardening
+* **Explicit Panel Gate Contract:** `App\Models\User` implements `Filament\Models\Contracts\FilamentUser`, restricting `/admin` panel access via `canAccessPanel()` strictly to users with `is_admin === true`.
+* **Audit Trail Tracking (`HasUserTracking`):** Content models (`Video`, `Puzzle`, `Setter`, `Constraint`, `Category`, `PatreonPost`, `CtcApp`, `VideoPuzzle`, etc.) automatically record `created_by_id` and `updated_by_id`.
 
 ---
 
-## 6. Local Quality & Dependency Verification
-* Maintain clean dependency security audits before committing:
-  `composer audit`
-  `npm audit`
+## 6. Livewire, Markdown & Front-End Security
+* **Safe Markdown Rendering (XSS Prevention):**
+  * Whenever rendering database-stored Markdown content (`$setter->bio`, `$constraint->description`, `$category->description`, `$app->description`) with `{!! Str::markdown(...) !!}`, always pass `['html_input' => 'strip', 'allow_unsafe_links' => false]` to strip raw HTML/script tags and block `javascript:` or `data:` links.
+  * Render plain-text fields (video titles, puzzle titles, rules text, host names) using escaped Blade syntax (`{{ $value }}`).
+* **Production Security Headers (`SetSecurityHeaders`):**
+  * Scoped to production (`if (! app()->isProduction()) { return $next($request); }`) so local HTTP development (`ctc.test`) is unaffected.
+  * Enforces `Strict-Transport-Security`, `Content-Security-Policy`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, `X-Content-Type-Options: nosniff`, and `X-Frame-Options: SAMEORIGIN`.
 
 ---
 
-## 7. Privacy, GDPR & CCPA Compliance Standards
-* **Self-Hosted Assets:** All fonts and front-end assets must be served locally (e.g. from `/fonts/` and local bundles). Never load fonts from Google Fonts or third-party CDNs to prevent unauthorized IP address transfers to external servers without prior consent.
-* **Two-Click Privacy Façade for Embedded Media:** YouTube and other third-party video embeds must use an interactive privacy façade (poster image with play button). Do not load external `iframe` or YouTube API scripts on initial page render. Connections to `youtube-nocookie.com` must only initiate upon affirmative user click.
-* **Strictly Necessary Cookies:** Restrict public cookies to strictly necessary functional tokens (`laravel_session`, `XSRF-TOKEN`). Do not introduce advertising, marketing, or cross-site tracking cookies.
-* **Privacy Policy Disclosures:** Maintain an up-to-date, public Privacy Policy (`/privacy`) detailing data processing practices, legitimate interests for security server logs, CCPA non-sale declarations, and GDPR data subject rights.
-* **Log Minimization:** Limit web server access log retention to a maximum of 30 days and rotate logs automatically.
+## 7. Local Quality & Dependency Verification
+Run automated security and test checks prior to deployment:
+```bash
+composer audit
+npm audit
+php artisan test --compact
+vendor/bin/pint --dirty --format agent
+```
+
+---
+
+## 8. Privacy, GDPR & CCPA Compliance Standards
+* **Two-Click Privacy Facade for Embedded Media:** Public YouTube embeds use an interactive poster facade. External iframes (`youtube-nocookie.com`) and the YouTube Iframe API load only after affirmative user interaction (clicking play or jumping to a timestamp bookmark).
+* **Consent-Gated Analytics:** Google Analytics loads only when the visitor explicitly grants consent via the privacy banner (`ctc_cookie_consent=accepted`).
+* **Self-Hosted Assets:** Web fonts (`/fonts/`), Tailwind CSS, Chart.js, and KaTeX are bundled locally via Vite (`resources/js/app.js`, `resources/css/app.css`).

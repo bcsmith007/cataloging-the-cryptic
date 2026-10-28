@@ -105,4 +105,13 @@ class UrlSanitizerTest extends TestCase
 
         $this->assertSame($expected, UrlSanitizer::unwrapAllInText($text));
     }
+
+    /**
+     * Test that unsafe destination URI schemes (such as javascript: or data:) are not unwrapped.
+     */
+    public function test_rejects_unsafe_destination_schemes_when_unwrapping(): void
+    {
+        $malicious = 'https://www.youtube.com/redirect?q=javascript%3Aalert(1)';
+        $this->assertSame($malicious, UrlSanitizer::unwrapYouTubeRedirect($malicious));
+    }
 }

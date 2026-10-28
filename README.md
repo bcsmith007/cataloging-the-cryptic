@@ -1,58 +1,99 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Cataloging the Cryptic
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Cataloging the Cryptic** (`catalogingthecryptic.com`) is a searchable community archive and analytics platform for videos, puzzles, setters, variant sudoku constraints, and timestamp bookmarks featured on the [Cracking the Cryptic](https://www.youtube.com/@CrackingTheCryptic) YouTube channel and Patreon.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Technology Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+* **Runtime:** PHP 8.5 (`>= 8.5.12`, patched against PHP2Shell CVE-2026-109618 / CVE-2026-109619)
+* **Framework:** Laravel 13
+* **Admin Panel:** Filament v5 + Livewire 4
+* **Frontend:** Blade, Alpine.js, Tailwind CSS v4, Chart.js 4, KaTeX (bundled locally via Vite)
+* **Database:** PostgreSQL (production) / SQLite (local & automated test suite)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Key Features
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+* **Video Catalog (`/videos`, `/videos/top`, `/videos/longest`, `/videos/shortest`, `/videos/random`):**
+  * Full archive of standard YouTube solves, YouTube Shorts, Live Streams, and Patron-exclusive releases.
+  * Two-click privacy facade for YouTube embeds, interactive timestamp bookmarks with instant player seeking, and chronological previous/next video navigation.
+  * Host filtering (Simon Anthony, Mark Goodliffe) on top, longest, and shortest video leaderboards.
+* **Setters Directory (`/setters`, `/setters/{slug}`):**
+  * Sortable, searchable directory of puzzle setters with puzzle counts, debut ("First on Channel") and latest ("Most Recent on Channel") appearances, Markdown biographies, and external setter links.
+* **Variant Constraints Directory (`/constraints`, `/constraints/{slug}`):**
+  * Sortable, searchable encyclopedia of variant sudoku rulesets and mechanics with Markdown + LaTeX math definitions, video/puzzle counts, viewership totals, and featured solve listings.
+* **Catalog Analytics & Trends (`/stats`):**
+  * Powered by `App\Services\CatalogStatsService` with automatic cache invalidation on model changes.
+  * Tracks release volume, median viewership (resistant to viral outlier skew), duration sweet-spot brackets, day-of-week publishing cadence, puzzle category progressions (yearly and 12-month rolling windows), variant constraint breakdowns (grouping tail constraints into an "Other" wedge), intro/outro music statistics, and automated data-driven observations.
+* **Cross-Entity Search (`/search`):**
+  * Unified search across videos, timestamp bookmarks, puzzles, setters, categories, constraints, and hosts via `App\Services\SearchService`.
+* **Cracking the Cryptic Apps Showcase (`/apps`):**
+  * Curated directory of official CTC mobile/desktop releases across Steam, iOS, and Android.
+* **Filament v5 Curation & Admin Suite (`/admin`):**
+  * Full CRUD management for Videos, Patreon Posts, Puzzles, Setters, Constraints, Categories, Hosts, Link Types, CTC Apps, and Users.
+  * Interactive `BookmarkPlayer` tool for live video timestamp annotation, `UnfinalizedVideos` review queue, automated Patreon metadata ingestion (`PatreonService`), and automatic YouTube redirect URL unwrapping (`UrlSanitizer`).
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+## Local Setup
 
-## Agentic Development
+1. **Install PHP and Node dependencies:**
+   ```bash
+   composer install
+   npm install
+   ```
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+2. **Configure environment:**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+   Set `YOUTUBE_API_KEY` in `.env` if running YouTube playlist/video synchronization.
+
+3. **Run database migrations and build frontend assets:**
+   ```bash
+   php artisan migrate
+   npm run build
+   ```
+
+4. **Start the development server:**
+   ```bash
+   composer run dev
+   ```
+
+---
+
+## Artisan Commands
+
+* **Synchronize YouTube Uploads & Tiered View Counts:**
+  ```bash
+  php artisan ctc:sync-youtube
+  php artisan ctc:sync-youtube --all
+  php artisan ctc:sync-youtube --dry-run
+  php artisan ctc:sync-youtube --all-stats
+  ```
+
+---
+
+## Testing, Formatting & Security Audits
+
+Run the PHPUnit test suite, Laravel Pint code formatter, and dependency security audits:
 
 ```bash
-composer require laravel/boost --dev
+# Run full test suite (compact output)
+php artisan test --compact
 
-php artisan boost:install
+# Run a single test file or filter
+php artisan test --compact tests/Feature/CatalogStatsTest.php
+
+# Format modified PHP files with Laravel Pint
+vendor/bin/pint --dirty --format agent
+
+# Audit PHP and JS dependencies for security advisories
+composer audit
+npm audit
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+See [SECURITY.md](SECURITY.md) for detailed runtime hardening (including PHP2Shell CVE-2026-109618 / CVE-2026-109619 requirements), [PROJECT_RULES.md](PROJECT_RULES.md) for engineering conventions, and [REQUIREMENTS.md](REQUIREMENTS.md) for product specifications.

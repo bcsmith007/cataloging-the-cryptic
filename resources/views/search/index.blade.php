@@ -275,7 +275,7 @@
                                 </div>
                                 @if (!empty($category->description))
                                     <div class="ctc-markdown-content ctc-markdown-preview">
-                                        {!! Str::markdown($category->description) !!}
+                                        {!! Str::markdown($category->description, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                                     </div>
                                 @endif
                             </div>
@@ -327,7 +327,7 @@
                                 </div>
                                 @if (!empty($constraint->description))
                                     <div class="ctc-markdown-content ctc-markdown-preview">
-                                        {!! Str::markdown($constraint->description) !!}
+                                        {!! Str::markdown($constraint->description, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                                     </div>
                                 @endif
                             </div>

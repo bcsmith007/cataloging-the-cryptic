@@ -197,6 +197,12 @@ class SetterCatalogTest extends TestCase
         $posZ = strpos($contentPuzzles, 'Zulu Setter');
         $posA = strpos($contentPuzzles, 'Alpha Setter');
         $this->assertTrue($posZ < $posA, 'Zulu Setter should appear before Alpha Setter when sorted by puzzles desc.');
+
+        // Filter by search query
+        $responseSearch = $this->get('/setters?q=Alpha');
+        $responseSearch->assertStatus(200);
+        $responseSearch->assertSee('Alpha Setter');
+        $responseSearch->assertDontSee('Zulu Setter');
     }
 
     /**

@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Constraint;
-use App\Models\Puzzle;
-use App\Models\Setter;
 use App\Models\Video;
+use App\Services\CatalogStatsService;
 use Illuminate\Contracts\View\View;
 
 /**
@@ -18,18 +16,13 @@ class HomeController extends Controller
     /**
      * Display the catalog landing page.
      */
-    public function index(): View
+    public function index(CatalogStatsService $statsService): View
     {
         $featuredVideo = Video::with(['hosts', 'puzzles.setters', 'puzzles.category', 'puzzles.constraints', 'puzzles.links', 'patreonPost'])
             ->latest('published_at')
             ->first();
 
-        $stats = [
-            'total_videos' => Video::count(),
-            'total_puzzles' => Puzzle::count(),
-            'total_setters' => Setter::has('puzzles')->count(),
-            'total_constraints' => Constraint::has('puzzles')->count(),
-        ];
+        $stats = $statsService->getHomeStats();
 
         $recentVideos = Video::with(['hosts', 'puzzles', 'patreonPost'])
             ->when($featuredVideo, fn ($query) => $query->where('id', '!=', $featuredVideo->id))

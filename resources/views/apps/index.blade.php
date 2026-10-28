@@ -134,7 +134,7 @@
 
                     @if (filled($app->description))
                         <div class="ctc-markdown-content text-xs text-slate-300 leading-relaxed">
-                            {!! Str::markdown($app->description) !!}
+                            {!! Str::markdown($app->description, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                         </div>
                     @endif
                 </div>

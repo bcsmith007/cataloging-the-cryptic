@@ -51,7 +51,7 @@
                     {{-- Bio Section --}}
                     @if ($setter->bio)
                         <div class="ctc-markdown-content text-sm text-slate-300 leading-relaxed max-w-3xl pt-1">
-                            {!! Str::markdown($setter->bio) !!}
+                            {!! Str::markdown($setter->bio, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                         </div>
                     @else
                         <p class="text-sm text-slate-500 italic max-w-2xl pt-1">

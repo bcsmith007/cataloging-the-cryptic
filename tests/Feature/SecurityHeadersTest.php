@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Setter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -116,5 +117,34 @@ class SecurityHeadersTest extends TestCase
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
         $this->assertTrue($response->headers->has('Content-Security-Policy'));
+    }
+
+    /**
+     * Test that PHP_SESSION_UPLOAD_PROGRESS payloads (CVE-2026-109619 / PHP2Shell vector) are rejected with 400.
+     */
+    public function test_rejects_php_session_upload_progress_requests(): void
+    {
+        $response = $this->get('/?PHP_SESSION_UPLOAD_PROGRESS=1');
+
+        $response->assertStatus(400);
+    }
+
+    /**
+     * Test that database-backed Markdown fields strip raw HTML script tags and unsafe links.
+     */
+    public function test_markdown_rendering_strips_raw_html_and_unsafe_links(): void
+    {
+        $setter = Setter::factory()->create([
+            'name' => 'Safe Markdown Setter',
+            'slug' => 'safe-markdown-setter',
+            'bio' => 'Hello **World** <script>alert("xss")</script> and [bad link](javascript:alert(1))',
+        ]);
+
+        $response = $this->get(route('setters.show', $setter->slug));
+
+        $response->assertStatus(200);
+        $response->assertSee('<strong>World</strong>', false);
+        $response->assertDontSee('<script>alert("xss")</script>', false);
+        $response->assertDontSee('javascript:alert(1)', false);
     }
 }

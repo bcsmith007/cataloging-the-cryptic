@@ -15,6 +15,10 @@ class SetSecurityHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->has('PHP_SESSION_UPLOAD_PROGRESS') || $request->cookies->has('PHP_SESSION_UPLOAD_PROGRESS')) {
+            abort(400, 'Session upload progress tracking is disabled.');
+        }
+
         if (! app()->isProduction()) {
             return $next($request);
         }

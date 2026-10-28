@@ -6,8 +6,7 @@ use App\Models\Setter;
 use App\Models\Video;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Controller handling public setter directory and setter profile views.
@@ -26,84 +25,91 @@ class SetterController extends Controller
         }
         $search = trim($request->query('q', $request->query('search', '')));
 
-        $setters = Setter::query()
+        $firstPublishedSubquery = DB::table('puzzle_setters')
+            ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_setters.puzzle_id')
+            ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
+            ->whereColumn('puzzle_setters.setter_id', 'setters.id')
+            ->whereNotNull('videos.published_at')
+            ->selectRaw('MIN(videos.published_at)');
+
+        $recentPublishedSubquery = DB::table('puzzle_setters')
+            ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_setters.puzzle_id')
+            ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
+            ->whereColumn('puzzle_setters.setter_id', 'setters.id')
+            ->whereNotNull('videos.published_at')
+            ->selectRaw('CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX(videos.published_at) ELSE NULL END');
+
+        $query = Setter::query()
             ->withCount('puzzles')
-            ->with([
-                'puzzles' => function ($query) {
-                    $query->with(['videos' => function ($vq) {
-                        $vq->orderBy('published_at', 'asc')->orderBy('id', 'asc');
-                    }]);
-                },
-            ])
-            ->get()
-            ->map(function (Setter $setter) {
-                $puzzleVideos = $setter->puzzles->flatMap(function ($puzzle) {
-                    return $puzzle->videos->map(function ($video) use ($puzzle) {
-                        return [
-                            'puzzle' => $puzzle,
-                            'video' => $video,
-                            'published_at' => $video->published_at,
-                        ];
-                    });
-                })->filter(fn ($item) => ! is_null($item['published_at']))
-                    ->sortBy('published_at')
-                    ->values();
-
-                $distinctVideos = $puzzleVideos->unique('video.id')->values();
-
-                $first = $puzzleVideos->first();
-                $recent = $distinctVideos->count() > 1 ? $puzzleVideos->last() : null;
-
-                $setter->first_puzzle = $first['puzzle'] ?? null;
-                $setter->first_video = $first['video'] ?? null;
-                $setter->first_date = $first['published_at'] ?? null;
-
-                $setter->recent_puzzle = $recent['puzzle'] ?? null;
-                $setter->recent_video = $recent['video'] ?? null;
-                $setter->recent_date = $recent['published_at'] ?? null;
-
-                return $setter;
-            });
+            ->addSelect([
+                'first_published_at' => $firstPublishedSubquery,
+                'recent_published_at' => $recentPublishedSubquery,
+            ]);
 
         if ($search !== '') {
-            $setters = $setters->filter(function (Setter $s) use ($search) {
-                return str_contains(Str::lower($s->name), Str::lower($search))
-                    || str_contains(Str::lower($s->bio ?? ''), Str::lower($search));
-            })->values();
+            $term = '%'.mb_strtolower($search).'%';
+            $query->where(function ($q) use ($term): void {
+                $q->whereRaw('LOWER(setters.name) LIKE ?', [$term])
+                    ->orWhereRaw("LOWER(COALESCE(setters.bio, '')) LIKE ?", [$term]);
+            });
         }
 
-        $setters = match ($sort) {
-            'name' => $direction === 'asc'
-                ? $setters->sortBy(fn ($s) => Str::lower($s->name))->values()
-                : $setters->sortByDesc(fn ($s) => Str::lower($s->name))->values(),
-            'first' => $direction === 'asc'
-                ? $setters->sortBy(fn ($s) => $s->first_date?->timestamp ?? PHP_INT_MAX)->values()
-                : $setters->sortByDesc(fn ($s) => $s->first_date?->timestamp ?? 0)->values(),
-            'recent' => $direction === 'asc'
-                ? $setters->sortBy(fn ($s) => $s->recent_date?->timestamp ?? PHP_INT_MAX)->values()
-                : $setters->sortByDesc(fn ($s) => $s->recent_date?->timestamp ?? 0)->values(),
-            default => $direction === 'asc'
-                ? $setters->sortBy('puzzles_count')->values()
-                : $setters->sortByDesc('puzzles_count')->values(),
+        match ($sort) {
+            'name' => $query
+                ->orderByRaw('LOWER(setters.name) '.($direction === 'asc' ? 'ASC' : 'DESC'))
+                ->orderBy('setters.id', 'asc'),
+            'first' => $query
+                ->orderByRaw('CASE WHEN first_published_at IS NULL THEN 1 ELSE 0 END ASC')
+                ->orderBy('first_published_at', $direction)
+                ->orderBy('setters.id', 'asc'),
+            'recent' => $query
+                ->orderByRaw('CASE WHEN recent_published_at IS NULL THEN 1 ELSE 0 END ASC')
+                ->orderBy('recent_published_at', $direction)
+                ->orderBy('setters.id', 'asc'),
+            default => $query
+                ->orderBy('puzzles_count', $direction)
+                ->orderByRaw('LOWER(setters.name) ASC')
+                ->orderBy('setters.id', 'asc'),
         };
 
-        $perPage = 20;
-        $currentPage = LengthAwarePaginator::resolveCurrentPage('page');
-        $totalSetters = $setters->count();
-        $currentPageItems = $setters->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        $setters = $query->paginate(20)->withQueryString();
 
-        $paginatedSetters = new LengthAwarePaginator(
-            $currentPageItems,
-            $totalSetters,
-            $perPage,
-            $currentPage,
-            [
-                'path' => LengthAwarePaginator::resolveCurrentPath(),
-                'query' => $request->query(),
-            ]
-        );
+        $setters->getCollection()->load([
+            'puzzles' => function ($puzzleQuery): void {
+                $puzzleQuery->with(['videos' => function ($videoQuery): void {
+                    $videoQuery->orderBy('published_at', 'asc')->orderBy('id', 'asc');
+                }]);
+            },
+        ]);
 
-        $setters = $paginatedSetters;
+        $setters->getCollection()->transform(function (Setter $setter): Setter {
+            $puzzleVideos = $setter->puzzles->flatMap(function ($puzzle) {
+                return $puzzle->videos->map(function ($video) use ($puzzle): array {
+                    return [
+                        'puzzle' => $puzzle,
+                        'video' => $video,
+                        'published_at' => $video->published_at,
+                    ];
+                });
+            })->filter(fn (array $item): bool => ! is_null($item['published_at']))
+                ->sortBy('published_at')
+                ->values();
+
+            $distinctVideos = $puzzleVideos->unique('video.id')->values();
+
+            $first = $puzzleVideos->first();
+            $recent = $distinctVideos->count() > 1 ? $puzzleVideos->last() : null;
+
+            $setter->setAttribute('first_puzzle', $first['puzzle'] ?? null);
+            $setter->setAttribute('first_video', $first['video'] ?? null);
+            $setter->setAttribute('first_date', $first['published_at'] ?? null);
+
+            $setter->setAttribute('recent_puzzle', $recent['puzzle'] ?? null);
+            $setter->setAttribute('recent_video', $recent['video'] ?? null);
+            $setter->setAttribute('recent_date', $recent['published_at'] ?? null);
+
+            return $setter;
+        });
 
         return view('setters.index', compact('setters', 'sort', 'direction', 'search'));
     }
