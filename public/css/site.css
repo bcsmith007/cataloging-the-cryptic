@@ -536,13 +536,12 @@ body {
 .ctc-public-footer {
     border-top: 1px solid #1e293b;
     background-color: #020617;
-    padding-top: 2.5rem;
-    padding-bottom: 2.5rem;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
     margin-top: 5rem;
     width: 100%;
     font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
     box-sizing: border-box;
-    text-align: center;
 }
 
 .ctc-public-footer *,
@@ -557,23 +556,67 @@ body {
     margin-right: auto;
     padding-left: 1rem;
     padding-right: 1rem;
-    text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     width: 100%;
 }
 
+@media (min-width: 640px) {
+    .ctc-public-footer .ctc-footer-inner {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .ctc-public-footer .ctc-footer-inner {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+}
+
 .ctc-public-footer .ctc-footer-links {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
-    margin-bottom: 0.75rem;
-    text-align: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+    text-align: left;
     width: 100%;
+    max-width: 56rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@media (min-width: 640px) {
+    .ctc-public-footer .ctc-footer-links {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.ctc-public-footer .ctc-footer-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.ctc-public-footer .ctc-footer-heading {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #cbd5e1;
+}
+
+.ctc-public-footer .ctc-footer-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
 }
 
 .ctc-public-footer .ctc-footer-links a {
@@ -586,12 +629,19 @@ body {
 }
 
 .ctc-public-footer .ctc-footer-links a:hover {
-    color: #ffffff;
+    color: #34d399;
+}
+
+.ctc-public-footer .ctc-footer-bottom {
+    border-top: 1px solid rgba(30, 41, 59, 0.8);
+    padding-top: 1.5rem;
+    width: 100%;
+    text-align: center;
 }
 
 .ctc-public-footer p {
-    margin-top: 0.375rem;
-    margin-bottom: 0.375rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.25rem;
     text-align: center;
     font-size: 0.75rem;
     line-height: 1rem;

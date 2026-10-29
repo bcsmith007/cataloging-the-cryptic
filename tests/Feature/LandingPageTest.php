@@ -396,4 +396,22 @@ class LandingPageTest extends TestCase
         $response->assertSee(route('videos.random'));
         $response->assertSee(route('search'));
     }
+
+    /**
+     * Test that the footer organizes navigation links into grouped columns.
+     */
+    public function test_footer_organizes_links_into_grouped_columns(): void
+    {
+        $response = $this->get('/');
+
+        $response->assertStatus(200);
+        $response->assertSee('aria-label="Footer navigation"', false);
+        $response->assertSee('ctc-footer-group');
+        $response->assertSee('ctc-footer-heading');
+        $response->assertSee('ctc-footer-list');
+        $response->assertSee('>Videos</h3>', false);
+        $response->assertSee('>Directory</h3>', false);
+        $response->assertSee('>Resources</h3>', false);
+        $response->assertSee('>Account</h3>', false);
+    }
 }

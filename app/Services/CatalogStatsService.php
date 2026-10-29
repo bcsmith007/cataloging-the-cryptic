@@ -165,7 +165,7 @@ class CatalogStatsService
         $monthly = $monthlyGrouped->map(function (Collection $group, $monthKey): array {
             $key = (string) $monthKey;
             try {
-                $label = Carbon::createFromFormat('Y-m', $key)->format('M Y');
+                $label = Carbon::createFromFormat('!Y-m', $key)->format('M Y');
             } catch (\Throwable) {
                 $label = $key;
             }
@@ -312,7 +312,7 @@ class CatalogStatsService
         $peakUploadMonth = null;
         if ($peakUploadRow && $peakUploadRow->m_key) {
             try {
-                $monthLabel = Carbon::createFromFormat('Y-m', $peakUploadRow->m_key)->format('F Y');
+                $monthLabel = Carbon::createFromFormat('!Y-m', $peakUploadRow->m_key)->format('F Y');
             } catch (\Throwable) {
                 $monthLabel = $peakUploadRow->m_key;
             }
@@ -330,7 +330,7 @@ class CatalogStatsService
         $peakViewsMonth = null;
         if ($peakViewsRow && $peakViewsRow->m_key) {
             try {
-                $monthLabel = Carbon::createFromFormat('Y-m', $peakViewsRow->m_key)->format('F Y');
+                $monthLabel = Carbon::createFromFormat('!Y-m', $peakViewsRow->m_key)->format('F Y');
             } catch (\Throwable) {
                 $monthLabel = $peakViewsRow->m_key;
             }
@@ -503,7 +503,7 @@ class CatalogStatsService
             $catCounts = [];
             $label = $mo;
             try {
-                $label = Carbon::createFromFormat('Y-m', $mo)->format('M Y');
+                $label = Carbon::createFromFormat('!Y-m', $mo)->format('M Y');
             } catch (\Throwable) {
                 $label = $mo;
             }
