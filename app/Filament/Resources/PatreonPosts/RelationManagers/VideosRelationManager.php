@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\PatreonPosts\RelationManagers;
 
 use App\Filament\Resources\Videos\Schemas\VideoForm;
+use App\Filament\Resources\Videos\VideoResource;
 use App\Models\PatreonPost;
 use App\Models\Video;
 use Filament\Actions\AssociateAction;
@@ -48,6 +49,7 @@ class VideosRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('title')
+            ->recordUrl(fn (Video $record): string => VideoResource::getUrl('edit', ['record' => $record]))
             ->columns([
                 TextColumn::make('title')
                     ->searchable()
@@ -122,9 +124,7 @@ class VideosRelationManager extends RelationManager
             ])
             ->recordActions([
                 EditAction::make()
-                    ->modalHeading('Edit Video Details')
-                    ->modalWidth('5xl')
-                    ->slideOver(),
+                    ->url(fn (Video $record): string => VideoResource::getUrl('edit', ['record' => $record])),
                 DissociateAction::make(),
                 DeleteAction::make(),
             ])

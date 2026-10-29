@@ -13,6 +13,7 @@ use App\Filament\Resources\Videos\Pages\EditVideo;
 use App\Filament\Resources\Videos\Pages\ListVideos;
 use App\Filament\Resources\Videos\RelationManagers\PuzzlesRelationManager;
 use App\Filament\Resources\Videos\Schemas\VideoForm;
+use App\Filament\Resources\Videos\VideoResource;
 use App\Models\Bookmark;
 use App\Models\Category;
 use App\Models\Constraint;
@@ -700,6 +701,17 @@ class AdminPanelTest extends TestCase
             'access_level' => 'exclusive',
             'video_type' => 'youtube',
         ]);
+
+        $createdVideo = Video::where('slug', 'exclusive-masterclass-video')->firstOrFail();
+
+        Livewire::test(VideosRelationManager::class, [
+            'ownerRecord' => $post,
+            'pageClass' => EditPatreonPost::class,
+        ])->assertTableActionHasUrl(
+            'edit',
+            VideoResource::getUrl('edit', ['record' => $createdVideo]),
+            record: $createdVideo,
+        );
     }
 
     /**
