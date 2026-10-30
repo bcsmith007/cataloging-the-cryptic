@@ -740,4 +740,33 @@ class CatalogStatsTest extends TestCase
         $updatedStats = $this->get(route('stats'));
         $this->assertSame(2, $updatedStats->viewData('kpis')['total_videos']);
     }
+
+    /**
+     * Test that the stats page renders the dynamic anti-collision category color resolver and card indicators.
+     */
+    public function test_stats_page_renders_dynamic_category_color_resolver_for_bar_charts(): void
+    {
+        $cat1 = Category::factory()->create(['name' => 'Variant Sudoku', 'slug' => 'variant-sudoku']);
+        $cat2 = Category::factory()->create(['name' => 'Pencil Puzzle', 'slug' => 'pencil-puzzle']);
+        $cat3 = Category::factory()->create(['name' => 'Video Game', 'slug' => 'video-game']);
+
+        foreach ([$cat1, $cat2, $cat3] as $idx => $cat) {
+            $video = Video::factory()->create([
+                'title' => 'Video '.$cat->name,
+                'published_at' => now()->subDays($idx + 1),
+            ]);
+            $puzzle = Puzzle::factory()->create([
+                'title' => 'Puzzle '.$cat->name,
+                'category_id' => $cat->id,
+            ]);
+            $video->puzzles()->attach($puzzle->id, ['order_in_video' => 1]);
+        }
+
+        $response = $this->get(route('stats'));
+        $response->assertStatus(200);
+        $response->assertSee('resolveDynamicCategoryColors', false);
+        $response->assertSee('getColorContrastDistance', false);
+        $response->assertSee('syncCategoryCardColorDots', false);
+        $response->assertSee('category-color-dot', false);
+    }
 }

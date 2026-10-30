@@ -394,7 +394,10 @@
             @foreach ($categoryStats as $cat)
                 <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
                     <div>
-                        <div class="font-bold text-slate-200 truncate" title="{{ $cat['name'] }}">{{ $cat['name'] }}</div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="category-color-dot w-2.5 h-2.5 rounded-full flex-shrink-0" data-category="{{ $cat['name'] }}"></span>
+                            <div class="font-bold text-slate-200 truncate" title="{{ $cat['name'] }}">{{ $cat['name'] }}</div>
+                        </div>
                         <div class="text-slate-400 mt-1 font-mono">{{ number_format($cat['count']) }} {{ Str::plural('puzzle', $cat['count']) }}</div>
                         @if (!$cat['is_unclassified'])
                             <div class="text-slate-400 font-mono text-[11px]">{{ $cat['distinct_videos'] }} videos</div>
@@ -983,17 +986,201 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // -------------------------------------------------------------
-    // Chart: Puzzle Categories Bar Chart
+    // Chart: Puzzle Categories Bar Chart (Dynamic Anti-Collision Colors)
     // -------------------------------------------------------------
-    const categoryColors = {
-        'Variant Sudoku': '#10b981',
-        'Wordle': '#22c55e',
-        'GAS': '#f59e0b',
-        'Classic Sudoku': '#0ea5e9',
-        'Cryptic Crossword': '#8b5cf6',
-        'Crossword': '#6366f1',
-        'Unclassified': '#64748b',
-    };
+    const UNCLASSIFIED_COLOR = '#64748b';
+    const categoryPalette = [
+        '#10b981', // emerald
+        '#f59e0b', // amber
+        '#3b82f6', // blue
+        '#ec4899', // pink
+        '#8b5cf6', // violet
+        '#06b6d4', // cyan
+        '#f97316', // orange
+        '#84cc16', // lime
+        '#d946ef', // fuchsia
+        '#eab308', // yellow
+        '#6366f1', // indigo
+        '#ef4444', // red
+        '#14b8a6', // teal
+        '#0ea5e9', // sky
+        '#a855f7', // purple
+        '#22c55e', // green
+    ];
+
+    function hexToRgbAndHsl(hex) {
+        const clean = hex.replace('#', '');
+        const r = parseInt(clean.substring(0, 2), 16) || 0;
+        const g = parseInt(clean.substring(2, 4), 16) || 0;
+        const b = parseInt(clean.substring(4, 6), 16) || 0;
+
+        const rNorm = r / 255;
+        const gNorm = g / 255;
+        const bNorm = b / 255;
+        const max = Math.max(rNorm, gNorm, bNorm);
+        const min = Math.min(rNorm, gNorm, bNorm);
+        let h = 0;
+        let s = 0;
+        const l = (max + min) / 2;
+
+        if (max !== min) {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case rNorm:
+                    h = ((gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0)) * 60;
+                    break;
+                case gNorm:
+                    h = ((bNorm - rNorm) / d + 2) * 60;
+                    break;
+                case bNorm:
+                    h = ((rNorm - gNorm) / d + 4) * 60;
+                    break;
+            }
+        }
+
+        return { r, g, b, h, s, l };
+    }
+
+    function hslToHex(h, s, l) {
+        const c = (1 - Math.abs(2 * l - 1)) * s;
+        const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+        const m = l - c / 2;
+        let rPrime = 0, gPrime = 0, bPrime = 0;
+
+        if (h < 60) { rPrime = c; gPrime = x; bPrime = 0; }
+        else if (h < 120) { rPrime = x; gPrime = c; bPrime = 0; }
+        else if (h < 180) { rPrime = 0; gPrime = c; bPrime = x; }
+        else if (h < 240) { rPrime = 0; gPrime = x; bPrime = c; }
+        else if (h < 300) { rPrime = x; gPrime = 0; bPrime = c; }
+        else { rPrime = c; gPrime = 0; bPrime = x; }
+
+        const toHex = v => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+        return '#' + toHex(rPrime) + toHex(gPrime) + toHex(bPrime);
+    }
+
+    function getColorContrastDistance(hexA, hexB) {
+        if (hexA.toLowerCase() === hexB.toLowerCase()) return 0;
+        const a = hexToRgbAndHsl(hexA);
+        const b = hexToRgbAndHsl(hexB);
+
+        const hueDiffRaw = Math.abs(a.h - b.h);
+        const hueDistance = Math.min(hueDiffRaw, 360 - hueDiffRaw);
+
+        const rMean = (a.r + b.r) / 2;
+        const dR = a.r - b.r;
+        const dG = a.g - b.g;
+        const dB = a.b - b.b;
+        const rgbDistance = Math.sqrt(
+            (2 + rMean / 256) * dR * dR +
+            4 * dG * dG +
+            (2 + (255 - rMean) / 256) * dB * dB
+        );
+
+        return (hueDistance * 3.0) + rgbDistance;
+    }
+
+    function resolveDynamicCategoryColors(categoryItems, timeSlices) {
+        const names = categoryItems.map(c => typeof c === 'string' ? c : c.name);
+        const pool = [...categoryPalette];
+        let extraIndex = 0;
+        while (pool.length < names.length + 4) {
+            const goldenHue = (extraIndex * 137.508 + 15) % 360;
+            pool.push(hslToHex(goldenHue, 0.78, 0.56));
+            extraIndex++;
+        }
+
+        // Build adjacency graph of categories that touch horizontally or in stacked bars
+        const touchingNeighbors = new Map();
+        names.forEach(name => touchingNeighbors.set(name, new Set()));
+
+        for (let i = 0; i < names.length; i++) {
+            if (i > 0) {
+                touchingNeighbors.get(names[i]).add(names[i - 1]);
+                touchingNeighbors.get(names[i - 1]).add(names[i]);
+            }
+        }
+
+        const slicesToInspect = (Array.isArray(timeSlices) && timeSlices.length > 0)
+            ? timeSlices
+            : (Array.isArray(categoryYearlyData) ? categoryYearlyData : []);
+
+        slicesToInspect.forEach(slice => {
+            if (!slice || !slice.categories) return;
+            const nonZeroInStack = names.filter(n => (Number(slice.categories[n]) || 0) > 0);
+            for (let k = 0; k < nonZeroInStack.length - 1; k++) {
+                const lower = nonZeroInStack[k];
+                const upper = nonZeroInStack[k + 1];
+                touchingNeighbors.get(lower).add(upper);
+                touchingNeighbors.get(upper).add(lower);
+            }
+        });
+
+        const assigned = {};
+        const usedColors = new Set();
+
+        names.forEach(name => {
+            const itemObj = categoryData.find(c => c.name === name);
+            if (name === 'Unclassified' || (itemObj && itemObj.is_unclassified)) {
+                assigned[name] = UNCLASSIFIED_COLOR;
+                usedColors.add(UNCLASSIFIED_COLOR);
+            }
+        });
+
+        names.forEach((name, idx) => {
+            if (assigned[name]) return;
+
+            const neighborNames = Array.from(touchingNeighbors.get(name) || []);
+            const neighborColors = neighborNames.map(n => assigned[n]).filter(Boolean);
+            const prevColor = idx > 0 ? assigned[names[idx - 1]] : null;
+
+            const available = pool.filter(c => !usedColors.has(c));
+            const candidates = available.length > 0 ? available : pool;
+
+            if (neighborColors.length === 0 && usedColors.size === 0) {
+                assigned[name] = candidates[0];
+                usedColors.add(candidates[0]);
+                return;
+            }
+
+            let bestColor = candidates[0];
+            let bestScore = -1;
+
+            candidates.forEach(candidate => {
+                const minTouchDist = neighborColors.length > 0
+                    ? Math.min(...neighborColors.map(nc => getColorContrastDistance(candidate, nc)))
+                    : 9999;
+                const prevDist = prevColor ? getColorContrastDistance(candidate, prevColor) : 9999;
+                const usedArr = Array.from(usedColors);
+                const minUsedDist = usedArr.length > 0
+                    ? Math.min(...usedArr.map(uc => getColorContrastDistance(candidate, uc)))
+                    : 9999;
+
+                // Prioritize maximum separation from touching neighbors, especially immediate neighbor
+                const score = (minTouchDist * 1000) + (prevDist * 10) + minUsedDist;
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestColor = candidate;
+                }
+            });
+
+            assigned[name] = bestColor;
+            usedColors.add(bestColor);
+        });
+
+        return assigned;
+    }
+
+    function syncCategoryCardColorDots(colorMap) {
+        document.querySelectorAll('.category-color-dot').forEach(dot => {
+            const catName = dot.getAttribute('data-category');
+            if (catName && colorMap[catName]) {
+                dot.style.backgroundColor = colorMap[catName];
+            }
+        });
+    }
+
+    const categoryColors = resolveDynamicCategoryColors(categoryData, categoryYearlyData);
 
     let currentCategoryFilter = 'all';
     let categoryChart = null;
@@ -1071,9 +1258,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const monthLabels = currentSlice.map(d => d.label);
             const categoryNames = categoryData.map(c => c.name);
+            const dynamicColors = resolveDynamicCategoryColors(categoryData, currentSlice);
+            syncCategoryCardColorDots(dynamicColors);
 
             const datasets = categoryNames.map(catName => {
-                const color = categoryColors[catName] || '#38bdf8';
+                const color = dynamicColors[catName] || categoryColors[catName];
                 return {
                     label: catName,
                     data: currentSlice.map(d => (d.categories && d.categories[catName]) ? d.categories[catName] : 0),
@@ -1154,9 +1343,11 @@ document.addEventListener('DOMContentLoaded', function () {
             // Stacked Bar Chart by Year
             const years = categoryYearlyData.map(d => d.year);
             const categoryNames = categoryData.map(c => c.name);
+            const dynamicColors = resolveDynamicCategoryColors(categoryData, categoryYearlyData);
+            syncCategoryCardColorDots(dynamicColors);
 
             const datasets = categoryNames.map(catName => {
-                const color = categoryColors[catName] || '#38bdf8';
+                const color = dynamicColors[catName] || categoryColors[catName];
                 return {
                     label: catName,
                     data: categoryYearlyData.map(d => (d.categories && d.categories[catName]) ? d.categories[catName] : 0),
@@ -1231,9 +1422,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 ? categoryData.filter(c => !c.is_unclassified)
                 : categoryData;
 
+            const dynamicColors = resolveDynamicCategoryColors(filtered, categoryYearlyData);
+            syncCategoryCardColorDots({ ...categoryColors, ...dynamicColors });
+
             const labels = filtered.map(c => c.name);
             const counts = filtered.map(c => c.count);
-            const bgColors = filtered.map(c => categoryColors[c.name] || '#38bdf8');
+            const bgColors = filtered.map(c => dynamicColors[c.name] || categoryColors[c.name]);
 
             categoryChart = new Chart(ctx, {
                 type: 'bar',
