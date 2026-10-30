@@ -208,9 +208,9 @@
                         {{-- Views & Published Date --}}
                         <div class="flex items-center gap-2">
                             <span>{{ number_format($video->view_count) }} views</span>
-                            @if ($video->published_at)
+                            @if ($video->effective_published_at)
                                 <span class="text-slate-600">&bull;</span>
-                                <span class="text-slate-500">@userDate($video->published_at)</span>
+                                <span class="text-slate-500">@userDate($video->effective_published_at)</span>
                             @endif
                         </div>
                     </div>

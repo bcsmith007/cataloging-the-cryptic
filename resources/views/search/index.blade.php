@@ -406,7 +406,7 @@
                             </div>
 
                             <div class="pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                                <span>@userDate($bookmark->video->published_at)</span>
+                                <span>@userDate($bookmark->video->effective_published_at)</span>
                                 <span class="text-amber-400/80 group-hover:text-amber-300 font-sans font-semibold flex items-center gap-1">
                                     Jump to moment &rarr;
                                 </span>
@@ -578,7 +578,7 @@
                                         </svg>
                                         <span>{{ number_format($video->view_count) }} views</span>
                                     </span>
-                                    <span class="text-slate-400">@userDate($video->published_at, 'M d, Y')</span>
+                                    <span class="text-slate-400">@userDate($video->effective_published_at, 'M d, Y')</span>
                                 </div>
                             </div>
                         </article>

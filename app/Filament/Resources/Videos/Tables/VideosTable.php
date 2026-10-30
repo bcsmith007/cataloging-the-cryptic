@@ -29,6 +29,7 @@ class VideosTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('patreonPost'))
             ->columns([
                 TextColumn::make('title')
                     ->searchable()
@@ -102,8 +103,9 @@ class VideosTable
 
                 TextColumn::make('published_at')
                     ->label('Published')
+                    ->state(fn (Video $record) => $record->effective_published_at)
                     ->date('M j, Y')
-                    ->sortable(),
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderByEffectivePublishedAt($direction)),
 
                 IconColumn::make('is_finalized')
                     ->label('Finalized')

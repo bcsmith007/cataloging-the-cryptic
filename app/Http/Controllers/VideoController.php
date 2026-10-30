@@ -19,8 +19,8 @@ class VideoController extends Controller
     public function index(): View
     {
         $videos = Video::query()
-            ->with(['hosts', 'puzzles.category'])
-            ->orderByDesc('published_at')
+            ->with(['hosts', 'puzzles.category', 'patreonPost'])
+            ->orderByEffectivePublishedAt('desc')
             ->orderByDesc('id')
             ->paginate(24);
 
@@ -35,7 +35,7 @@ class VideoController extends Controller
         [$currentHost, $currentHostSlug, $currentHostName] = $this->resolveHostFilter($request);
 
         $query = Video::query()
-            ->with(['hosts', 'puzzles.category']);
+            ->with(['hosts', 'puzzles.category', 'patreonPost']);
 
         if ($currentHost) {
             $query->whereHas('hosts', fn ($q) => $q->where('hosts.id', $currentHost->id));
@@ -45,7 +45,7 @@ class VideoController extends Controller
 
         $videos = $query
             ->orderByDesc('view_count')
-            ->orderByDesc('published_at')
+            ->orderByEffectivePublishedAt('desc')
             ->take(24)
             ->get();
 
@@ -61,7 +61,7 @@ class VideoController extends Controller
         [$currentHost, $currentHostSlug, $currentHostName] = $this->resolveHostFilter($request);
 
         $query = Video::query()
-            ->with(['hosts', 'puzzles.category'])
+            ->with(['hosts', 'puzzles.category', 'patreonPost'])
             ->where('video_type', '!=', 'live_stream');
 
         if ($currentHost) {
@@ -72,7 +72,7 @@ class VideoController extends Controller
 
         $videos = $query
             ->orderByDesc('duration_seconds')
-            ->orderByDesc('published_at')
+            ->orderByEffectivePublishedAt('desc')
             ->take(24)
             ->get();
 
@@ -88,7 +88,7 @@ class VideoController extends Controller
         [$currentHost, $currentHostSlug, $currentHostName] = $this->resolveHostFilter($request);
 
         $query = Video::query()
-            ->with(['hosts', 'puzzles.category'])
+            ->with(['hosts', 'puzzles.category', 'patreonPost'])
             ->where('video_type', '!=', 'youtube_short')
             ->where('duration_seconds', '>', 0);
 
@@ -100,7 +100,7 @@ class VideoController extends Controller
 
         $videos = $query
             ->orderBy('duration_seconds', 'asc')
-            ->orderByDesc('published_at')
+            ->orderByEffectivePublishedAt('desc')
             ->take(24)
             ->get();
 
@@ -174,6 +174,7 @@ class VideoController extends Controller
     {
         $video = Video::with([
             'hosts',
+            'patreonPost',
             'puzzles.setters',
             'puzzles.category',
             'puzzles.constraints',

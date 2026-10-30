@@ -115,7 +115,7 @@
                         {{ $firstVideo->title }}
                     </a>
                     <div class="text-xs text-slate-400 mt-1">
-                        Published {{ $firstVideo->published_at ? \App\Services\TimezoneService::format($firstVideo->published_at) : 'N/A' }}
+                        Published {{ $firstVideo->effective_published_at ? \App\Services\TimezoneService::format($firstVideo->effective_published_at) : 'N/A' }}
                     </div>
                 @else
                     <div class="text-sm text-slate-500 italic mt-2">
@@ -145,7 +145,7 @@
                         {{ $latestVideo->title }}
                     </a>
                     <div class="text-xs text-slate-400 mt-1">
-                        Published {{ $latestVideo->published_at ? \App\Services\TimezoneService::format($latestVideo->published_at) : 'N/A' }}
+                        Published {{ $latestVideo->effective_published_at ? \App\Services\TimezoneService::format($latestVideo->effective_published_at) : 'N/A' }}
                     </div>
                 @else
                     <div class="text-sm text-slate-500 italic mt-2">
@@ -345,9 +345,9 @@
                         {{-- Duration & Published Date --}}
                         <div class="flex items-center gap-3">
                             <span class="text-slate-300" title="Duration">{{ $video->formatted_duration }}</span>
-                            @if ($video->published_at)
+                            @if ($video->effective_published_at)
                                 <span class="text-slate-500">&bull;</span>
-                                <span title="Published Date">{{ \App\Services\TimezoneService::format($video->published_at) }}</span>
+                                <span title="Published Date">{{ \App\Services\TimezoneService::format($video->effective_published_at) }}</span>
                             @endif
                         </div>
                     </div>

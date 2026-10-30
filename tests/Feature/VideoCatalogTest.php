@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Host;
+use App\Models\PatreonPost;
 use App\Models\Puzzle;
 use App\Models\User;
 use App\Models\Video;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
@@ -944,5 +946,65 @@ class VideoCatalogTest extends TestCase
         $newestResponse->assertStatus(200);
         $newestResponse->assertSee(route('videos.show', $currentVideo->slug));
         $newestResponse->assertSee('Current Video Solve');
+    }
+
+    /**
+     * Test that Patreon Exclusive videos use their attached PatreonPost's published_at date for display and sorting.
+     */
+    public function test_patreon_exclusive_video_uses_patreon_post_published_at_for_display_and_sorting(): void
+    {
+        $patreonPost = PatreonPost::create([
+            'title' => 'January 20 Patreon Release',
+            'slug' => 'january-20-patreon-release',
+            'patreon_url' => 'https://www.patreon.com/posts/jan-20-release-111222',
+            'published_at' => Carbon::parse('2026-01-20 15:00:00', 'UTC'),
+        ]);
+
+        // Unlisted video uploaded to YouTube on Jan 5, but released in Patreon post on Jan 20
+        $exclusiveVideo = Video::factory()->create([
+            'patreon_post_id' => $patreonPost->id,
+            'title' => 'Exclusive Patreon Solve',
+            'slug' => 'exclusive-patreon-solve',
+            'access_level' => 'exclusive',
+            'published_at' => Carbon::parse('2026-01-05 15:00:00', 'UTC'),
+        ]);
+
+        // Public video uploaded on Jan 12 (between Jan 5 and Jan 20)
+        $middlePublicVideo = Video::factory()->create([
+            'title' => 'Middle Public Solve',
+            'slug' => 'middle-public-solve',
+            'access_level' => 'public',
+            'published_at' => Carbon::parse('2026-01-12 15:00:00', 'UTC'),
+        ]);
+
+        // Older public video uploaded on Jan 2
+        $oldestPublicVideo = Video::factory()->create([
+            'title' => 'Oldest Public Solve',
+            'slug' => 'oldest-public-solve',
+            'access_level' => 'public',
+            'published_at' => Carbon::parse('2026-01-02 15:00:00', 'UTC'),
+        ]);
+
+        // Verify /videos/ sorts Exclusive Patreon Solve first (Jan 20 > Jan 12 > Jan 2)
+        // and displays Jan 20, 2026 instead of Jan 5, 2026
+        $indexResponse = $this->get(route('videos.index'));
+        $indexResponse->assertStatus(200);
+        $indexResponse->assertSeeInOrder([
+            'Exclusive Patreon Solve',
+            'Middle Public Solve',
+            'Oldest Public Solve',
+        ]);
+        $indexResponse->assertSee('Jan 20, 2026');
+        $indexResponse->assertDontSee('Jan 5, 2026');
+
+        // Verify video detail page displays Jan 20, 2026 and links Previous Video to Middle Public Solve
+        $showResponse = $this->get(route('videos.show', $exclusiveVideo->slug));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('Jan 20, 2026');
+        $showResponse->assertDontSee('Jan 5, 2026');
+        $this->assertSame($middlePublicVideo->id, $exclusiveVideo->previousVideo()?->id);
+        $this->assertNull($exclusiveVideo->nextVideo());
+        $this->assertSame($exclusiveVideo->id, $middlePublicVideo->nextVideo()?->id);
+        $this->assertSame($oldestPublicVideo->id, $middlePublicVideo->previousVideo()?->id);
     }
 }

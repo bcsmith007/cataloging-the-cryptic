@@ -239,7 +239,7 @@
                     </span>
                     <span class="flex items-center space-x-1.5 bg-slate-900 px-3 py-1.5 rounded-md border border-slate-800">
                         <span>Published:</span>
-                        <strong class="text-white">@userDate($video->published_at)</strong>
+                        <strong class="text-white">@userDate($video->effective_published_at)</strong>
                     </span>
                     @if ($video->view_count > 0)
                         <span class="flex items-center space-x-1.5 bg-slate-900 px-3 py-1.5 rounded-md border border-slate-800">

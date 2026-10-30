@@ -207,8 +207,8 @@
 
                         {{-- Published Date --}}
                         <div class="flex items-center gap-3">
-                            @if ($video->published_at)
-                                <span class="text-slate-400">@userDate($video->published_at)</span>
+                            @if ($video->effective_published_at)
+                                <span class="text-slate-400">@userDate($video->effective_published_at)</span>
                             @endif
                         </div>
                     </div>

@@ -105,7 +105,7 @@
                             </span>
                             <span class="flex items-center space-x-1.5 bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/50">
                                 <span>Published:</span>
-                                <strong class="text-white">@userDate($featuredVideo->published_at)</strong>
+                                <strong class="text-white">@userDate($featuredVideo->effective_published_at)</strong>
                             </span>
                             @if ($featuredVideo->view_count > 0)
                                 <span class="flex items-center space-x-1.5 bg-slate-800/80 px-2.5 py-1 rounded-md border border-slate-700/50">
@@ -385,7 +385,7 @@
                         </div>
 
                         <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
-                            <span>@userDate($video->published_at)</span>
+                            <span>@userDate($video->effective_published_at)</span>
                             <span>{{ $video->puzzles->count() }} {{ Str::plural('Puzzle', $video->puzzles->count()) }}</span>
                         </div>
                     </div>

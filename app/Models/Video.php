@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * Video model representing YouTube uploads or Patreon exclusives.
@@ -23,6 +24,14 @@ class Video extends Model
     use HasFactory;
     use HasSlugRouteKey;
     use HasUserTracking;
+
+    /**
+     * SQL expression resolving the effective publication timestamp of a video.
+     *
+     * For Patron Exclusive videos attached to a Patreon post, the publication date
+     * of the Patreon post takes precedence over the video's individual upload timestamp.
+     */
+    public const EFFECTIVE_PUBLISHED_AT_SQL = "COALESCE((SELECT patreon_posts.published_at FROM patreon_posts WHERE patreon_posts.id = videos.patreon_post_id AND videos.access_level = 'exclusive'), videos.published_at)";
 
     /**
      * The "booted" method of the model.
@@ -403,20 +412,72 @@ class Video extends Model
     }
 
     /**
+     * Resolve the effective publication timestamp used for display and sorting.
+     *
+     * When the video is Patron Exclusive and attached to a Patreon post, returns
+     * the Patreon post's published_at timestamp; otherwise returns the video's published_at.
+     */
+    public function getEffectivePublishedAt(): ?Carbon
+    {
+        if ($this->isExclusive() && $this->patreon_post_id !== null) {
+            $post = $this->relationLoaded('patreonPost')
+                ? $this->patreonPost
+                : $this->patreonPost()->first();
+
+            if ($post?->published_at !== null) {
+                return $post->published_at;
+            }
+        }
+
+        return $this->published_at;
+    }
+
+    /**
+     * Accessor for the effective publication timestamp (`$video->effective_published_at`).
+     *
+     * @return Attribute<Carbon|null, never>
+     */
+    protected function effectivePublishedAt(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): ?Carbon => $this->getEffectivePublishedAt()
+        );
+    }
+
+    /**
+     * Scope a query to order videos by their effective publication date.
+     */
+    public function scopeOrderByEffectivePublishedAt(Builder $query, string $direction = 'desc'): Builder
+    {
+        $dir = strtolower($direction) === 'asc' ? 'ASC' : 'DESC';
+
+        return $query->orderByRaw(self::EFFECTIVE_PUBLISHED_AT_SQL.' '.$dir);
+    }
+
+    /**
      * Get the chronologically previous video in the catalog (published immediately before).
      */
     public function previousVideo(): ?self
     {
+        $effectiveDate = $this->effective_published_at;
+        if (! $effectiveDate) {
+            return null;
+        }
+
+        $dateValue = $this->fromDateTime($effectiveDate);
+
         return static::query()
-            ->where(function (Builder $query): void {
-                $query->where('published_at', '<', $this->published_at)
-                    ->orWhere(function (Builder $q): void {
-                        $q->where('published_at', '=', $this->published_at)
-                            ->where('id', '<', $this->id);
+            ->with('patreonPost')
+            ->where('videos.id', '!=', $this->id)
+            ->where(function (Builder $query) use ($dateValue): void {
+                $query->whereRaw(self::EFFECTIVE_PUBLISHED_AT_SQL.' < ?', [$dateValue])
+                    ->orWhere(function (Builder $q) use ($dateValue): void {
+                        $q->whereRaw(self::EFFECTIVE_PUBLISHED_AT_SQL.' = ?', [$dateValue])
+                            ->where('videos.id', '<', $this->id);
                     });
             })
-            ->orderByDesc('published_at')
-            ->orderByDesc('id')
+            ->orderByEffectivePublishedAt('desc')
+            ->orderByDesc('videos.id')
             ->first();
     }
 
@@ -425,16 +486,25 @@ class Video extends Model
      */
     public function nextVideo(): ?self
     {
+        $effectiveDate = $this->effective_published_at;
+        if (! $effectiveDate) {
+            return null;
+        }
+
+        $dateValue = $this->fromDateTime($effectiveDate);
+
         return static::query()
-            ->where(function (Builder $query): void {
-                $query->where('published_at', '>', $this->published_at)
-                    ->orWhere(function (Builder $q): void {
-                        $q->where('published_at', '=', $this->published_at)
-                            ->where('id', '>', $this->id);
+            ->with('patreonPost')
+            ->where('videos.id', '!=', $this->id)
+            ->where(function (Builder $query) use ($dateValue): void {
+                $query->whereRaw(self::EFFECTIVE_PUBLISHED_AT_SQL.' > ?', [$dateValue])
+                    ->orWhere(function (Builder $q) use ($dateValue): void {
+                        $q->whereRaw(self::EFFECTIVE_PUBLISHED_AT_SQL.' = ?', [$dateValue])
+                            ->where('videos.id', '>', $this->id);
                     });
             })
-            ->orderBy('published_at', 'asc')
-            ->orderBy('id', 'asc')
+            ->orderByEffectivePublishedAt('asc')
+            ->orderBy('videos.id', 'asc')
             ->first();
     }
 }

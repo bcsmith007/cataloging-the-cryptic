@@ -176,9 +176,9 @@
                         {{-- Video Length & Published Date --}}
                         <div class="flex items-center gap-3">
                             <span class="text-slate-300" title="Duration">{{ $video->formatted_duration }}</span>
-                            @if ($video->published_at)
+                            @if ($video->effective_published_at)
                                 <span class="text-slate-500">&bull;</span>
-                                <span class="text-slate-400">@userDate($video->published_at)</span>
+                                <span class="text-slate-400">@userDate($video->effective_published_at)</span>
                             @endif
                         </div>
                     </div>

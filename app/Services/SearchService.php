@@ -78,18 +78,18 @@ class SearchService
                             ->orWhereHas('constraints', fn ($cn) => $cn->whereRaw('LOWER(name) LIKE ?', [$term]));
                     });
             })
-            ->orderByDesc('published_at')
+            ->orderByEffectivePublishedAt('desc')
             ->orderByDesc('id');
 
         // 2. Base Query: Bookmarks (Video Timestamp Annotations)
         // Matches label
         $bookmarksQuery = Bookmark::query()
-            ->with(['video.hosts', 'puzzle'])
+            ->with(['video.hosts', 'video.patreonPost', 'puzzle'])
             ->whereHas('video')
             ->whereRaw('LOWER(bookmarks.label) LIKE ?', [$term])
             ->join('videos', 'bookmarks.video_id', '=', 'videos.id')
             ->select('bookmarks.*')
-            ->orderByDesc('videos.published_at')
+            ->orderByRaw(Video::EFFECTIVE_PUBLISHED_AT_SQL.' DESC')
             ->orderBy('bookmarks.timestamp_seconds');
 
         // 3. Base Query: Puzzles
@@ -138,7 +138,7 @@ class SearchService
 
         // 7. Base Query: Hosts
         $hostsQuery = Host::query()
-            ->with(['videos' => fn ($q) => $q->orderByDesc('published_at')->limit(4)])
+            ->with(['videos' => fn ($q) => $q->with('patreonPost')->orderByEffectivePublishedAt('desc')->limit(4)])
             ->withCount('videos')
             ->whereRaw('LOWER(name) LIKE ?', [$term])
             ->orderByDesc('videos_count')

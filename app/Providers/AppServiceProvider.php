@@ -6,6 +6,7 @@ use App\Http\Responses\LoginResponse;
 use App\Http\Responses\RegistrationResponse;
 use App\Models\Category;
 use App\Models\Constraint;
+use App\Models\PatreonPost;
 use App\Models\Puzzle;
 use App\Models\Setter;
 use App\Models\Video;
@@ -44,7 +45,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Model::shouldBeStrict(! app()->isProduction());
 
-        foreach ([Video::class, Puzzle::class, Setter::class, Constraint::class, Category::class, VideoPuzzle::class] as $modelClass) {
+        foreach ([Video::class, PatreonPost::class, Puzzle::class, Setter::class, Constraint::class, Category::class, VideoPuzzle::class] as $modelClass) {
             $modelClass::saved(fn () => CatalogStatsService::flushCache());
             $modelClass::deleted(fn () => CatalogStatsService::flushCache());
         }

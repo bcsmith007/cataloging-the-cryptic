@@ -19,14 +19,16 @@ class HomeController extends Controller
     public function index(CatalogStatsService $statsService): View
     {
         $featuredVideo = Video::with(['hosts', 'puzzles.setters', 'puzzles.category', 'puzzles.constraints', 'puzzles.links', 'patreonPost'])
-            ->latest('published_at')
+            ->orderByEffectivePublishedAt('desc')
+            ->orderByDesc('id')
             ->first();
 
         $stats = $statsService->getHomeStats();
 
         $recentVideos = Video::with(['hosts', 'puzzles', 'patreonPost'])
             ->when($featuredVideo, fn ($query) => $query->where('id', '!=', $featuredVideo->id))
-            ->latest('published_at')
+            ->orderByEffectivePublishedAt('desc')
+            ->orderByDesc('id')
             ->take(6)
             ->get();
 

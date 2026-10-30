@@ -25,19 +25,21 @@ class SetterController extends Controller
         }
         $search = trim($request->query('q', $request->query('search', '')));
 
+        $effectiveDateSql = Video::EFFECTIVE_PUBLISHED_AT_SQL;
+
         $firstPublishedSubquery = DB::table('puzzle_setters')
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_setters.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_setters.setter_id', 'setters.id')
-            ->whereNotNull('videos.published_at')
-            ->selectRaw('MIN(videos.published_at)');
+            ->whereRaw("{$effectiveDateSql} IS NOT NULL")
+            ->selectRaw("MIN({$effectiveDateSql})");
 
         $recentPublishedSubquery = DB::table('puzzle_setters')
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_setters.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_setters.setter_id', 'setters.id')
-            ->whereNotNull('videos.published_at')
-            ->selectRaw('CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX(videos.published_at) ELSE NULL END');
+            ->whereRaw("{$effectiveDateSql} IS NOT NULL")
+            ->selectRaw("CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX({$effectiveDateSql}) ELSE NULL END");
 
         $query = Setter::query()
             ->withCount('puzzles')
@@ -77,7 +79,7 @@ class SetterController extends Controller
         $setters->getCollection()->load([
             'puzzles' => function ($puzzleQuery): void {
                 $puzzleQuery->with(['videos' => function ($videoQuery): void {
-                    $videoQuery->orderBy('published_at', 'asc')->orderBy('id', 'asc');
+                    $videoQuery->with('patreonPost')->orderByEffectivePublishedAt('asc')->orderBy('id', 'asc');
                 }]);
             },
         ]);
@@ -88,7 +90,7 @@ class SetterController extends Controller
                     return [
                         'puzzle' => $puzzle,
                         'video' => $video,
-                        'published_at' => $video->published_at,
+                        'published_at' => $video->effective_published_at,
                     ];
                 });
             })->filter(fn (array $item): bool => ! is_null($item['published_at']))
@@ -127,11 +129,12 @@ class SetterController extends Controller
             })
             ->with([
                 'hosts',
+                'patreonPost',
                 'puzzles' => function ($query) {
                     $query->with(['setters', 'category']);
                 },
             ])
-            ->orderByDesc('published_at')
+            ->orderByEffectivePublishedAt('desc')
             ->orderByDesc('id')
             ->paginate(24);
 

@@ -25,26 +25,28 @@ class ConstraintController extends Controller
         }
         $search = trim($request->query('q', $request->query('search', '')));
 
+        $effectiveDateSql = Video::EFFECTIVE_PUBLISHED_AT_SQL;
+
         $videosCountSubquery = DB::table('puzzle_constraints')
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_constraints.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_constraints.constraint_id', 'constraints.id')
-            ->whereNotNull('videos.published_at')
+            ->whereRaw("{$effectiveDateSql} IS NOT NULL")
             ->selectRaw('COUNT(DISTINCT videos.id)');
 
         $firstPublishedSubquery = DB::table('puzzle_constraints')
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_constraints.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_constraints.constraint_id', 'constraints.id')
-            ->whereNotNull('videos.published_at')
-            ->selectRaw('MIN(videos.published_at)');
+            ->whereRaw("{$effectiveDateSql} IS NOT NULL")
+            ->selectRaw("MIN({$effectiveDateSql})");
 
         $recentPublishedSubquery = DB::table('puzzle_constraints')
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_constraints.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_constraints.constraint_id', 'constraints.id')
-            ->whereNotNull('videos.published_at')
-            ->selectRaw('CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX(videos.published_at) ELSE NULL END');
+            ->whereRaw("{$effectiveDateSql} IS NOT NULL")
+            ->selectRaw("CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX({$effectiveDateSql}) ELSE NULL END");
 
         $query = Constraint::query()
             ->withCount('puzzles')
@@ -89,7 +91,7 @@ class ConstraintController extends Controller
         $constraints->getCollection()->load([
             'puzzles' => function ($puzzleQuery): void {
                 $puzzleQuery->with(['videos' => function ($videoQuery): void {
-                    $videoQuery->orderBy('published_at', 'asc')->orderBy('id', 'asc');
+                    $videoQuery->with('patreonPost')->orderByEffectivePublishedAt('asc')->orderBy('id', 'asc');
                 }]);
             },
         ]);
@@ -100,7 +102,7 @@ class ConstraintController extends Controller
                     return [
                         'puzzle' => $puzzle,
                         'video' => $video,
-                        'published_at' => $video->published_at,
+                        'published_at' => $video->effective_published_at,
                     ];
                 });
             })->filter(fn (array $item): bool => ! is_null($item['published_at']))
@@ -136,7 +138,7 @@ class ConstraintController extends Controller
             ->whereHas('puzzles.constraints', function ($query) use ($constraint): void {
                 $query->where('constraints.id', $constraint->id);
             })
-            ->whereNotNull('published_at');
+            ->whereRaw(Video::EFFECTIVE_PUBLISHED_AT_SQL.' IS NOT NULL');
 
         $aggregates = (clone $baseVideosQuery)
             ->toBase()
@@ -147,11 +149,11 @@ class ConstraintController extends Controller
         $totalViews = (int) ($aggregates->total_views ?? 0);
 
         $firstVideo = $totalVideos > 0
-            ? (clone $baseVideosQuery)->orderBy('published_at', 'asc')->orderBy('id', 'asc')->first()
+            ? (clone $baseVideosQuery)->with('patreonPost')->orderByEffectivePublishedAt('asc')->orderBy('id', 'asc')->first()
             : null;
 
         $latestVideo = $totalVideos > 1
-            ? (clone $baseVideosQuery)->orderByDesc('published_at')->orderByDesc('id')->first()
+            ? (clone $baseVideosQuery)->with('patreonPost')->orderByEffectivePublishedAt('desc')->orderByDesc('id')->first()
             : $firstVideo;
 
         $puzzlesCount = $constraint->puzzles()->count();
@@ -162,11 +164,12 @@ class ConstraintController extends Controller
             })
             ->with([
                 'hosts',
+                'patreonPost',
                 'puzzles' => function ($query): void {
                     $query->with(['setters', 'category', 'constraints']);
                 },
             ])
-            ->orderByDesc('published_at')
+            ->orderByEffectivePublishedAt('desc')
             ->orderByDesc('id')
             ->paginate(24);
 
