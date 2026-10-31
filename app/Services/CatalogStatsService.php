@@ -72,7 +72,7 @@ class CatalogStatsService
             return $this->computeStats();
         });
 
-        if (! is_array($stats) || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'])) {
+        if (! is_array($stats) || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'])) {
             $stats = $this->computeStats();
             Cache::put(self::DASHBOARD_CACHE_KEY, $stats, self::CACHE_TTL_SECONDS);
         }
@@ -117,7 +117,7 @@ class CatalogStatsService
 
         // Load catalog video attributes for unified in-memory grouping and median calculations
         $allVideos = Video::query()
-            ->select(['id', 'video_type', 'duration_seconds', 'view_count', 'published_at'])
+            ->select(['id', 'video_type', 'access_level', 'patreon_post_id', 'duration_seconds', 'view_count', 'published_at'])
             ->get();
 
         $totalVideos = $allVideos->count();
@@ -193,11 +193,15 @@ class CatalogStatsService
             'youtube' => 'Standard Solves',
             'youtube_short' => 'YouTube Shorts',
             'live_stream' => 'Live Streams',
+            'patreon_exclusive' => 'Patreon Exclusives',
         ];
 
-        $byFormat = $allVideos->groupBy('video_type');
+        $byFormat = $allVideos->groupBy(fn (Video $v): string => ($v->isExclusive() || $v->video_type === 'patreon')
+            ? 'patreon_exclusive'
+            : $v->video_type
+        );
         $formatStats = [];
-        foreach (['youtube', 'youtube_short', 'live_stream'] as $type) {
+        foreach (['youtube', 'youtube_short', 'live_stream', 'patreon_exclusive'] as $type) {
             $group = $byFormat->get($type, collect());
             $count = $group->count();
             $views = (int) $group->sum('view_count');

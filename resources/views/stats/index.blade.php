@@ -251,14 +251,14 @@
 
     {{-- Main Section 2: Format & Duration Analysis (2-column grid) --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {{-- Card 1: Format Breakdown (Standard vs Shorts vs Live) --}}
+        {{-- Card 1: Format Breakdown (Standard vs Shorts vs Live vs Patreon) --}}
         <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6 flex flex-col justify-between">
             <div>
                 <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
                     <h3 class="text-lg font-bold text-white tracking-tight">
                         Video Format Breakdown
                     </h3>
-                    <span class="text-xs font-mono text-slate-400">Standard &bull; Shorts &bull; Live</span>
+                    <span class="text-xs font-mono text-slate-400">Standard &bull; Shorts &bull; Live &bull; Patreon</span>
                 </div>
                 <p class="text-xs text-slate-400 mt-2">
                     Proportion of catalog uploads and total views contributed by each video format.
@@ -799,9 +799,10 @@ document.addEventListener('DOMContentLoaded', function () {
             datasets: [{
                 data: formatData.map(f => f.count),
                 backgroundColor: [
-                    '#10b981', // emerald
-                    '#f59e0b', // amber
-                    '#0ea5e9', // sky
+                    '#10b981', // emerald (Standard Solves)
+                    '#f59e0b', // amber (YouTube Shorts)
+                    '#0ea5e9', // sky (Live Streams)
+                    '#f43f5e', // rose (Patreon Exclusives)
                 ],
                 borderColor: '#020617',
                 borderWidth: 3,

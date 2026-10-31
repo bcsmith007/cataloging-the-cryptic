@@ -62,6 +62,7 @@ class CatalogStatsTest extends TestCase
         $response->assertSee('Standard Solves');
         $response->assertSee('YouTube Shorts');
         $response->assertSee('Live Streams');
+        $response->assertSee('Patreon Exclusives');
         $response->assertDontSee('https://cdn.jsdelivr.net');
     }
 
@@ -768,5 +769,62 @@ class CatalogStatsTest extends TestCase
         $response->assertSee('getColorContrastDistance', false);
         $response->assertSee('syncCategoryCardColorDots', false);
         $response->assertSee('category-color-dot', false);
+    }
+
+    /**
+     * Test that Patreon Exclusive videos are separated out from Standard Solves in the format breakdown.
+     */
+    public function test_format_breakdown_separates_patreon_exclusive_videos_from_standard_solves(): void
+    {
+        // 2 public Standard Solves
+        Video::factory()->count(2)->create([
+            'video_type' => 'youtube',
+            'access_level' => 'public',
+            'duration_seconds' => 1800,
+            'view_count' => 40000,
+            'published_at' => Carbon::parse('2024-09-01 12:00:00'),
+        ]);
+
+        // 1 Patreon Exclusive video (video_type = 'youtube', access_level = 'exclusive')
+        Video::factory()->create([
+            'video_type' => 'youtube',
+            'access_level' => 'exclusive',
+            'duration_seconds' => 2400,
+            'view_count' => 5000,
+            'published_at' => Carbon::parse('2024-09-05 12:00:00'),
+        ]);
+
+        // 1 YouTube Short
+        Video::factory()->create([
+            'video_type' => 'youtube_short',
+            'access_level' => 'public',
+            'duration_seconds' => 50,
+            'view_count' => 15000,
+            'published_at' => Carbon::parse('2024-09-10 12:00:00'),
+        ]);
+
+        $response = $this->get(route('stats'));
+        $response->assertStatus(200);
+
+        /** @var array<string, array<string, mixed>> $formatStats */
+        $formatStats = $response->viewData('formatStats');
+        $this->assertIsArray($formatStats);
+        $this->assertArrayHasKey('youtube', $formatStats);
+        $this->assertArrayHasKey('youtube_short', $formatStats);
+        $this->assertArrayHasKey('live_stream', $formatStats);
+        $this->assertArrayHasKey('patreon_exclusive', $formatStats);
+
+        // Standard Solves should only count the 2 public youtube videos
+        $this->assertSame('Standard Solves', $formatStats['youtube']['label']);
+        $this->assertSame(2, $formatStats['youtube']['count']);
+        $this->assertSame(50.0, $formatStats['youtube']['percentage']);
+        $this->assertSame(80000, $formatStats['youtube']['total_views']);
+
+        // Patreon Exclusives should count the 1 exclusive video
+        $this->assertSame('Patreon Exclusives', $formatStats['patreon_exclusive']['label']);
+        $this->assertSame(1, $formatStats['patreon_exclusive']['count']);
+        $this->assertSame(25.0, $formatStats['patreon_exclusive']['percentage']);
+        $this->assertSame(5000, $formatStats['patreon_exclusive']['total_views']);
+        $this->assertSame(2400, $formatStats['patreon_exclusive']['median_duration_seconds']);
     }
 }
