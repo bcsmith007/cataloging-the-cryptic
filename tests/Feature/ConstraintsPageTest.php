@@ -352,4 +352,54 @@ class ConstraintsPageTest extends TestCase
         $responsePage2->assertDontSee('Constraint 01');
         $responsePage2->assertDontSee('Constraint 20');
     }
+
+    /**
+     * Test that searching on /constraints filters across all pagination groupings and shows all matching constraints,
+     * even if the user was on page 2 when filtering down to fewer than 20 results.
+     */
+    public function test_constraints_search_filters_across_all_pages_and_resets_out_of_bounds_page(): void
+    {
+        // Create 25 regular constraints
+        for ($i = 1; $i <= 25; $i++) {
+            $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+            Constraint::factory()->create([
+                'name' => "Standard Rule {$num}",
+                'slug' => "standard-rule-{$num}",
+                'description' => "Generic ruleset number {$num}",
+            ]);
+        }
+
+        // Create 3 matching constraints that would sort across different pages alphabetically
+        Constraint::factory()->create([
+            'name' => 'Alpha Whisper Line',
+            'slug' => 'alpha-whisper-line',
+            'description' => 'First whisper variant.',
+        ]);
+        Constraint::factory()->create([
+            'name' => 'Middle Whisper Loop',
+            'slug' => 'middle-whisper-loop',
+            'description' => 'Second whisper variant.',
+        ]);
+        Constraint::factory()->create([
+            'name' => 'Zeta Whisper Cage',
+            'slug' => 'zeta-whisper-cage',
+            'description' => 'Third whisper variant.',
+        ]);
+
+        // Searching for "Whisper" (including from page 2) must return all 3 matching constraints on a single view
+        $response = $this->get(route('constraints.index', [
+            'sort' => 'name',
+            'dir' => 'asc',
+            'q' => 'Whisper',
+            'page' => 2,
+        ]));
+
+        $response->assertStatus(200);
+        $response->assertSee('Showing 1–3 of 3');
+        $response->assertSee('Alpha Whisper Line');
+        $response->assertSee('Middle Whisper Loop');
+        $response->assertSee('Zeta Whisper Cage');
+        $response->assertDontSee('Standard Rule 01');
+        $response->assertSee('performLiveSearch', false);
+    }
 }

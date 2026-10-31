@@ -87,6 +87,9 @@ class ConstraintController extends Controller
         };
 
         $constraints = $query->paginate(20)->withQueryString();
+        if ($constraints->isEmpty() && $constraints->total() > 0) {
+            $constraints = $query->paginate(20, ['*'], 'page', 1)->withQueryString();
+        }
 
         $constraints->getCollection()->load([
             'puzzles' => function ($puzzleQuery): void {
