@@ -8,6 +8,7 @@ use App\Http\Controllers\SetterController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\VideoController;
 use App\Models\Video;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -16,29 +17,29 @@ Route::get('/apps', [AppController::class, 'index'])->name('apps.index');
 Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/videos', [VideoController::class, 'index'])->name('videos.index');
 Route::get('/videos/top', [VideoController::class, 'top'])->name('videos.top');
-Route::get('/videos/most-viewed', fn (Request $request) => redirect()->route('videos.top', $request->query(), 301));
+Route::get('/videos/most-viewed', fn (Request $request): RedirectResponse => redirect()->route('videos.top', $request->query(), 301));
 Route::get('/videos/longest', [VideoController::class, 'longest'])->name('videos.longest');
 Route::get('/videos/shortest', [VideoController::class, 'shortest'])->name('videos.shortest');
 Route::get('/videos/random', [VideoController::class, 'random'])->name('videos.random');
 Route::get('/stats', [StatsController::class, 'index'])->name('stats');
-Route::get('/videos/stats', fn () => redirect()->route('stats', [], 301));
-Route::get('/videos/{record}/edit', fn (Video $record) => redirect()->route('filament.admin.resources.videos.edit', ['record' => $record]))->name('videos.edit');
+Route::get('/videos/stats', fn (): RedirectResponse => redirect()->route('stats', [], 301));
+Route::get('/videos/{record}/edit', fn (Video $record): RedirectResponse => redirect()->route('filament.admin.resources.videos.edit', ['record' => $record]))->name('videos.edit');
 Route::get('/videos/{slug}', [VideoController::class, 'show'])->name('videos.show');
 Route::get('/setters', [SetterController::class, 'index'])->name('setters.index');
 Route::get('/setters/{setter}', [SetterController::class, 'show'])->name('setters.show');
 Route::get('/constraints', [ConstraintController::class, 'index'])->name('constraints.index');
 Route::get('/constraints/{constraint}', [ConstraintController::class, 'show'])->name('constraints.show');
-Route::get('/contraints', fn () => redirect()->route('constraints.index', [], 301));
-Route::get('/contraints/{constraint}', fn ($constraint) => redirect()->route('constraints.show', ['constraint' => $constraint], 301));
+Route::get('/contraints', fn (): RedirectResponse => redirect()->route('constraints.index', [], 301));
+Route::get('/contraints/{constraint}', fn (string $constraint): RedirectResponse => redirect()->route('constraints.show', ['constraint' => $constraint], 301));
 Route::view('/privacy', 'privacy')->name('privacy');
 Route::view('/markdown', 'markdown.index')->name('markdown.guide');
-Route::get('/bookmark-player', function (Request $request) {
+Route::get('/bookmark-player', function (Request $request): RedirectResponse {
     $queryString = $request->getQueryString();
 
     return redirect('/admin/bookmark-player'.($queryString ? '?'.$queryString : ''));
 });
 
-Route::get('/test-video-bookmarks', function (Request $request) {
+Route::get('/test-video-bookmarks', function (Request $request): RedirectResponse {
     $queryString = $request->getQueryString();
 
     return redirect('/admin/bookmark-player'.($queryString ? '?'.$queryString : ''));

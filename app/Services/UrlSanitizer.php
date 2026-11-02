@@ -28,6 +28,11 @@ class UrlSanitizer
             return '';
         }
 
+        // Reject dangerous executable URI schemes (e.g. javascript:, data:, vbscript:)
+        if (preg_match('/^\s*(?:javascript|vbscript|data):/i', $trimmed)) {
+            return '';
+        }
+
         // Normalize HTML entities that may be present when copying from web source
         if (str_contains($trimmed, '&amp;')) {
             $trimmed = str_replace('&amp;', '&', $trimmed);

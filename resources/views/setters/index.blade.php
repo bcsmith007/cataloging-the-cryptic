@@ -23,7 +23,7 @@
             </div>
 
             <div class="flex items-center gap-3 flex-wrap">
-                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300">
+                <span id="setters-total-badge" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300">
                     <span class="text-emerald-400 font-mono font-bold mr-1.5">{{ number_format($setters->total()) }}</span>
                     <span>Distinct {{ Str::plural('Setter', $setters->total()) }}</span>
                 </span>
@@ -33,7 +33,7 @@
 
     {{-- Filter Search & Table Controls --}}
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <form method="GET" action="{{ route('setters.index') }}" class="relative max-w-sm w-full">
+        <form id="setter-search-form" method="GET" action="{{ route('setters.index') }}" class="relative max-w-sm w-full">
             @if ($sort !== 'puzzles')
                 <input type="hidden" name="sort" value="{{ $sort }}">
             @endif
@@ -50,17 +50,19 @@
                 name="q"
                 value="{{ $search }}"
                 id="setter-table-search"
-                placeholder="Search setters (press Enter)..."
+                placeholder="Search setters..."
+                autocomplete="off"
                 class="w-full pl-9 @if($search !== '') pr-16 @else pr-4 @endif py-2 bg-slate-900/80 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
             />
-            @if ($search !== '')
-                <a href="{{ route('setters.index', array_filter(['sort' => $sort !== 'puzzles' ? $sort : null, 'dir' => $direction !== 'desc' ? $direction : null])) }}" class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 hover:text-emerald-400" title="Clear search">
-                    ✕ Clear
-                </a>
-            @endif
+            <a id="setter-search-clear"
+               href="{{ route('setters.index', array_filter(['sort' => $sort !== 'puzzles' ? $sort : null, 'dir' => $direction !== 'desc' ? $direction : null])) }}"
+               class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 hover:text-emerald-400 @if($search === '') hidden @endif"
+               title="Clear search">
+                ✕ Clear
+            </a>
         </form>
 
-        <div class="text-xs text-slate-400 flex items-center gap-2">
+        <div id="setters-showing-summary" class="text-xs text-slate-400 flex items-center gap-2">
             @if ($setters->total() > 0)
                 <span>Showing {{ number_format($setters->firstItem()) }}–{{ number_format($setters->lastItem()) }} of {{ number_format($setters->total()) }}</span>
                 <span class="text-slate-600">&bull;</span>
@@ -73,7 +75,7 @@
     <div class="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl shadow-black/20">
         <div class="overflow-x-auto">
             <table id="setters-table" class="min-w-full divide-y divide-slate-800 text-left text-sm">
-                <thead class="bg-slate-950/80 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <thead id="setters-table-head" class="bg-slate-950/80 text-xs font-semibold uppercase tracking-wider text-slate-400">
                     <tr>
                         {{-- 1. Name Column --}}
                         <th scope="col" class="py-3.5 pl-6 pr-4 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="name">
@@ -207,7 +209,11 @@
                     @empty
                         <tr>
                             <td colspan="4" class="py-12 text-center text-slate-400">
-                                No setters cataloged yet.
+                                @if ($search !== '')
+                                    No setters found matching "{{ $search }}".
+                                @else
+                                    No setters cataloged yet.
+                                @endif
                             </td>
                         </tr>
                     @endforelse
@@ -217,30 +223,124 @@
     </div>
 
     {{-- Pagination Controls --}}
-    @if ($setters->hasPages())
-        <div class="pt-6 border-t border-slate-800 flex justify-center">
-            {{ $setters->links() }}
-        </div>
-    @endif
+    <div id="setters-pagination">
+        @if ($setters->hasPages())
+            <div class="pt-6 border-t border-slate-800 flex justify-center">
+                {{ $setters->links() }}
+            </div>
+        @endif
+    </div>
 </div>
 
-{{-- Interactive Client-side Search Filter for Current Page --}}
+{{-- Interactive Live Search Filter Across All Pages --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const searchForm = document.getElementById('setter-search-form');
     const searchInput = document.getElementById('setter-table-search');
+    const clearButton = document.getElementById('setter-search-clear');
     const tableBody = document.getElementById('setters-table-body');
-    if (!searchInput || !tableBody) return;
+    if (!searchForm || !searchInput || !tableBody) return;
 
-    const rows = Array.from(tableBody.querySelectorAll('tr.setter-row'));
+    let debounceTimer = null;
+    let activeController = null;
 
-    // Live Instant Filter on current page rows (Pressing Enter submits form across all pages)
-    searchInput.addEventListener('input', function () {
-        const query = this.value.toLowerCase().trim();
-        rows.forEach(function (row) {
-            const text = row.innerText.toLowerCase();
-            row.style.display = text.includes(query) ? '' : 'none';
-        });
+    function updateClearButtonVisibility(value) {
+        if (!clearButton) return;
+        if (value.trim() !== '') {
+            clearButton.classList.remove('hidden');
+            searchInput.classList.remove('pr-4');
+            searchInput.classList.add('pr-16');
+        } else {
+            clearButton.classList.add('hidden');
+            searchInput.classList.remove('pr-16');
+            searchInput.classList.add('pr-4');
+        }
+    }
+
+    function performLiveSearch(rawQuery) {
+        const query = rawQuery.trim();
+        const url = new URL(searchForm.action, window.location.origin);
+
+        const sortInput = searchForm.querySelector('input[name="sort"]');
+        const dirInput = searchForm.querySelector('input[name="dir"]');
+        if (sortInput && sortInput.value) {
+            url.searchParams.set('sort', sortInput.value);
+        }
+        if (dirInput && dirInput.value) {
+            url.searchParams.set('dir', dirInput.value);
+        }
+        if (query !== '') {
+            url.searchParams.set('q', query);
+        }
+
+        if (activeController) {
+            activeController.abort();
+        }
+        activeController = new AbortController();
+
+        fetch(url.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            signal: activeController.signal
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Search request failed');
+                }
+                return response.text();
+            })
+            .then(function (html) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const newBody = doc.getElementById('setters-table-body');
+                if (newBody) {
+                    tableBody.innerHTML = newBody.innerHTML;
+                }
+
+                ['setters-table-head', 'setters-total-badge', 'setters-showing-summary', 'setters-pagination'].forEach(function (id) {
+                    const currentEl = document.getElementById(id);
+                    const nextEl = doc.getElementById(id);
+                    if (currentEl && nextEl) {
+                        currentEl.innerHTML = nextEl.innerHTML;
+                    }
+                });
+
+                window.history.replaceState(null, '', url.toString());
+            })
+            .catch(function (err) {
+                if (err && err.name === 'AbortError') {
+                    return;
+                }
+            });
+    }
+
+    searchInput.addEventListener('input', function (e) {
+        const value = e.target.value;
+        updateClearButtonVisibility(value);
+
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+        }
+        debounceTimer = setTimeout(function () {
+            performLiveSearch(value);
+        }, 200);
     });
+
+    if (clearButton) {
+        clearButton.addEventListener('click', function (e) {
+            e.preventDefault();
+            searchInput.value = '';
+            updateClearButtonVisibility('');
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
+            performLiveSearch('');
+            searchInput.focus();
+        });
+    }
 });
 </script>
 @endsection

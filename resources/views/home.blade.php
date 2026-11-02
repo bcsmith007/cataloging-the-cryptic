@@ -452,7 +452,15 @@
         }
         if (wrapper) {
             wrapper.classList.remove('hidden');
-            wrapper.innerHTML = '<iframe class="absolute inset-0 w-full h-full" src="https://www.youtube-nocookie.com/embed/{{ $featuredVideo->youtube_video_id }}?autoplay=1&rel=0" title="{{ addslashes($featuredVideo->title) }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+            const iframe = document.createElement('iframe');
+            iframe.className = 'absolute inset-0 w-full h-full';
+            iframe.src = 'https://www.youtube-nocookie.com/embed/{{ rawurlencode($featuredVideo->youtube_video_id) }}?autoplay=1&rel=0';
+            iframe.title = @json($featuredVideo->title);
+            iframe.frameBorder = '0';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            wrapper.innerHTML = '';
+            wrapper.appendChild(iframe);
         }
     }
 </script>

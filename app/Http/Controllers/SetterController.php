@@ -75,6 +75,9 @@ class SetterController extends Controller
         };
 
         $setters = $query->paginate(20)->withQueryString();
+        if ($setters->isEmpty() && $setters->total() > 0) {
+            $setters = $query->paginate(20, ['*'], 'page', 1)->withQueryString();
+        }
 
         $setters->getCollection()->load([
             'puzzles' => function ($puzzleQuery): void {
@@ -124,13 +127,13 @@ class SetterController extends Controller
         $setter->loadMissing(['links']);
 
         $videos = Video::query()
-            ->whereHas('puzzles.setters', function ($query) use ($setter) {
+            ->whereHas('puzzles.setters', function ($query) use ($setter): void {
                 $query->where('setters.id', $setter->id);
             })
             ->with([
                 'hosts',
                 'patreonPost',
-                'puzzles' => function ($query) {
+                'puzzles' => function ($query): void {
                     $query->with(['setters', 'category']);
                 },
             ])
