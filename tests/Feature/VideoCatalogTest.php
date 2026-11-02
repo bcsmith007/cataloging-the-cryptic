@@ -117,10 +117,12 @@ class VideoCatalogTest extends TestCase
         $response->assertSee('45:15');
         $response->assertSee('45');
 
-        // Verify Views
-        $response->assertSee('98,765 views');
-        $response->assertSee('45,000 views');
-        $response->assertSee('12,500 views');
+        // Verify Views in lower-left of thumbnail and Puzzle count in lower-right of tile
+        $response->assertSee('98,765');
+        $response->assertSee('45,000');
+        $response->assertSee('12,500');
+        $response->assertSee('1 Puzzle');
+        $response->assertSee('0 Puzzles');
 
         // Verify route link
         $response->assertSee(route('videos.show', $newerVideo->slug));

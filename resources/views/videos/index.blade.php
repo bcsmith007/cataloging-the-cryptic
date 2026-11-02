@@ -74,29 +74,6 @@
                         </a>
                     @endif
 
-                    {{-- Badges on Thumbnail --}}
-                    <div class="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap">
-                        @if ($video->isExclusive())
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/90 text-white backdrop-blur-sm shadow-sm">
-                                Patron Exclusive
-                            </span>
-                        @else
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-600/90 text-white backdrop-blur-sm shadow-sm">
-                                Public
-                            </span>
-                        @endif
-
-                        @if ($video->isYouTubeShort())
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/90 text-white backdrop-blur-sm shadow-sm">
-                                Short
-                            </span>
-                        @elseif ($video->isLiveStream())
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-600/90 text-white backdrop-blur-sm shadow-sm">
-                                Live
-                            </span>
-                        @endif
-                    </div>
-
                     @auth
                         {{-- Admin Edit Shortcut --}}
                         <div class="absolute top-2.5 right-2.5 z-10">
@@ -115,72 +92,100 @@
                         </div>
                     @endauth
 
-                    {{-- Video Length (Duration) Overlay --}}
-                    <div class="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded bg-black/85 backdrop-blur-sm text-[11px] font-mono font-medium text-white shadow-sm flex items-center gap-1">
-                        <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    {{-- Current Views Overlay (Lower-Left) --}}
+                    <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/80 backdrop-blur-sm text-[11px] font-mono text-white flex items-center gap-1" title="View Count">
+                        <svg class="w-3.5 h-3.5 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
-                        <span>{{ $video->formatted_duration }}</span>
+                        <span>{{ number_format($video->view_count) }}</span>
+                    </div>
+
+                    {{-- Video Length (Duration) Overlay (Lower-Right) --}}
+                    <div class="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/80 backdrop-blur-sm text-[11px] font-mono text-white" title="Duration">
+                        {{ $video->formatted_duration }}
                     </div>
                 </div>
 
                 {{-- Video Metadata & Details --}}
-                <div class="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <div class="p-5 space-y-4 flex-1 flex flex-col justify-between">
                     <div class="space-y-3">
-                        {{-- Video Name --}}
-                        <h2 class="text-base font-bold text-white leading-snug group-hover:text-emerald-400 transition-colors">
-                            <a href="{{ route('videos.show', $video->slug) }}">
-                                {{ $video->title }}
-                            </a>
-                        </h2>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                @if ($video->isExclusive())
+                                    <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
+                                        Patron Exclusive
+                                    </span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                        Public
+                                    </span>
+                                @endif
 
-                        {{-- Host(s) --}}
-                        <div class="flex items-center gap-1.5 flex-wrap text-xs">
-                            <span class="text-slate-400 font-medium">Host{{ $video->hosts->count() > 1 ? 's' : '' }}:</span>
-                            @forelse ($video->hosts as $host)
-                                <span class="px-2 py-0.5 rounded-full bg-slate-800 text-slate-200 border border-slate-700 font-medium">
-                                    {{ $host->name }}
-                                </span>
-                            @empty
-                                <span class="text-slate-500 italic">None listed</span>
-                            @endforelse
+                                @if ($video->isYouTubeShort())
+                                    <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                        Short
+                                    </span>
+                                @elseif ($video->isLiveStream())
+                                    <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                        Live
+                                    </span>
+                                @endif
+
+                                @php
+                                    $puzzleTypes = $video->puzzles->map(fn ($p) => $p->category?->name)->filter()->unique();
+                                @endphp
+                                @foreach ($puzzleTypes as $type)
+                                    <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-950/80 text-indigo-300 border border-indigo-700/60">
+                                        {{ $type }}
+                                    </span>
+                                @endforeach
+                            </div>
                         </div>
 
-                        {{-- Puzzle Type --}}
-                        <div class="flex items-center gap-1.5 flex-wrap text-xs">
-                            <span class="text-slate-400 font-medium">Puzzle Type:</span>
-                            @php
-                                $puzzleTypes = $video->puzzles->map(fn ($p) => $p->category?->name)->filter()->unique();
-                            @endphp
-                            @forelse ($puzzleTypes as $type)
-                                <span class="px-2 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 font-medium">
-                                    {{ $type }}
+                        {{-- Video Name --}}
+                        <h3 class="text-base font-bold text-white leading-snug">
+                            <a href="{{ route('videos.show', $video->slug) }}" class="hover:text-emerald-400 transition-colors">
+                                {{ $video->title }}
+                            </a>
+                        </h3>
+
+                        {{-- Host(s) --}}
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            @foreach ($video->hosts as $host)
+                                <span class="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                                    {{ $host->name }}
                                 </span>
-                            @empty
-                                <span class="text-slate-500 italic">None cataloged</span>
-                            @endforelse
+                            @endforeach
+                        </div>
+
+                        @if ($video->intro_music || $video->outro_music)
+                            <div class="flex flex-col gap-1 text-[11px] text-slate-400 pt-1">
+                                @if ($video->intro_music)
+                                    <span class="truncate"><span class="text-indigo-400 font-medium">Intro:</span> {{ $video->intro_music }}</span>
+                                @endif
+                                @if ($video->outro_music)
+                                    <span class="truncate"><span class="text-emerald-400 font-medium">Outro:</span> {{ $video->outro_music }}</span>
+                                @endif
+                            </div>
+                        @endif
+
+                        <div class="pt-1 flex flex-wrap gap-2 text-xs">
+                            <a href="{{ route('videos.show', $video->slug) }}" class="text-emerald-400 hover:text-emerald-300 font-medium inline-flex items-center gap-1">
+                                <span>Details &amp; Timestamps &rarr;</span>
+                            </a>
+                            @if (($video->isExclusive() || $video->hasPatreonPost()) && $video->getWatchUrl())
+                                <a href="{{ $video->getWatchUrl() }}" target="_blank" rel="noopener noreferrer" class="text-red-400 hover:text-red-300 font-medium inline-flex items-center gap-1">
+                                    <span>Open Patreon &rarr;</span>
+                                </a>
+                            @endif
                         </div>
                     </div>
 
-                    {{-- Stats & Footer Bar: Video Length, Views, and Date --}}
-                    <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
-                        {{-- Views --}}
-                        <span class="flex items-center gap-1.5" title="View Count">
-                            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            <span>{{ number_format($video->view_count) }} views</span>
-                        </span>
-
-                        {{-- Video Length & Published Date --}}
-                        <div class="flex items-center gap-3">
-                            <span class="text-slate-300" title="Duration">{{ $video->formatted_duration }}</span>
-                            @if ($video->effective_published_at)
-                                <span class="text-slate-500">&bull;</span>
-                                <span class="text-slate-400">@userDate($video->effective_published_at)</span>
-                            @endif
-                        </div>
+                    {{-- Footer Bar: Date (Lower-Left) and Number of Puzzles (Lower-Right) --}}
+                    <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
+                        <span>@userDate($video->effective_published_at)</span>
+                        <span>{{ $video->puzzles->count() }} {{ Str::plural('Puzzle', $video->puzzles->count()) }}</span>
                     </div>
                 </div>
             </article>

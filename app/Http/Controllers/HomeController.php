@@ -25,7 +25,7 @@ class HomeController extends Controller
 
         $stats = $statsService->getHomeStats();
 
-        $recentVideos = Video::with(['hosts', 'puzzles', 'patreonPost'])
+        $recentVideos = Video::with(['hosts', 'puzzles.category', 'patreonPost'])
             ->when($featuredVideo, fn ($query) => $query->where('id', '!=', $featuredVideo->id))
             ->orderByEffectivePublishedAt('desc')
             ->orderByDesc('id')
