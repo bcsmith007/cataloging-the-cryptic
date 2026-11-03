@@ -58,7 +58,7 @@ class CatalogStatsTest extends TestCase
         $response->assertSee('Most Viewed Video');
         $response->assertSee('Channel Peak Months');
         $response->assertSee('Total Puzzles by Category');
-        $response->assertSee('Unclassified');
+        $response->assertDontSee('Unclassified');
         $response->assertSee('Standard Solves');
         $response->assertSee('YouTube Shorts');
         $response->assertSee('Live Streams');
@@ -68,7 +68,7 @@ class CatalogStatsTest extends TestCase
 
     /**
      * Test that multi-puzzle videos count each puzzle individually by category,
-     * and videos with no puzzles are counted as unclassified.
+     * and videos with no puzzles attached are not counted in the category chart.
      */
     public function test_category_chart_aggregates_multiple_puzzles_and_unclassified_videos(): void
     {
@@ -96,8 +96,8 @@ class CatalogStatsTest extends TestCase
         ]);
         $videoB->puzzles()->attach($puzzle3->id, ['order_in_video' => 1]);
 
-        // Video C has NO puzzles (Unclassified)
-        $videoC = Video::factory()->create([
+        // Video C has NO puzzles attached and should not be counted in the category breakdown
+        Video::factory()->create([
             'title' => 'Pending Indexing Video',
             'published_at' => Carbon::parse('2024-05-01 12:00:00'),
             'view_count' => 30000,
@@ -117,23 +117,23 @@ class CatalogStatsTest extends TestCase
         $this->assertNotNull($variantStat);
         $this->assertSame(2, $variantStat['count']); // 2 puzzles across 2 videos
         $this->assertSame(2, $variantStat['distinct_videos']);
+        $this->assertSame(66.7, $variantStat['percentage']);
 
         $this->assertNotNull($gasStat);
         $this->assertSame(1, $gasStat['count']); // 1 puzzle from Video A
         $this->assertSame(1, $gasStat['distinct_videos']);
+        $this->assertSame(33.3, $gasStat['percentage']);
 
-        $this->assertNotNull($unclassifiedStat);
-        $this->assertSame(1, $unclassifiedStat['count']); // Video C
-        $this->assertTrue($unclassifiedStat['is_unclassified']);
+        $this->assertNull($unclassifiedStat);
 
-        // Verify yearly progression has entries for 2024
+        // Verify yearly progression has entries for 2024 without Unclassified
         /** @var array $categoryYearly */
         $categoryYearly = $response->viewData('categoryYearly');
         $year2024 = collect($categoryYearly)->firstWhere('year', '2024');
         $this->assertNotNull($year2024);
         $this->assertSame(2, $year2024['categories']['Variant Sudoku']);
         $this->assertSame(1, $year2024['categories']['GAS']);
-        $this->assertSame(1, $year2024['categories']['Unclassified']);
+        $this->assertArrayNotHasKey('Unclassified', $year2024['categories']);
 
         // Verify monthly progression has entries for March, April, and May 2024
         /** @var array $categoryMonthly */
@@ -151,7 +151,9 @@ class CatalogStatsTest extends TestCase
         $this->assertSame(1, $apr2024['categories']['Variant Sudoku']);
 
         $this->assertNotNull($may2024);
-        $this->assertSame(1, $may2024['categories']['Unclassified']);
+        $this->assertSame(0, $may2024['categories']['Variant Sudoku']);
+        $this->assertSame(0, $may2024['categories']['GAS']);
+        $this->assertArrayNotHasKey('Unclassified', $may2024['categories']);
     }
 
     /**

@@ -72,7 +72,11 @@ class CatalogStatsService
             return $this->computeStats();
         });
 
-        if (! is_array($stats) || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'])) {
+        if (
+            ! is_array($stats)
+            || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'])
+            || collect($stats['categoryStats'] ?? [])->contains('name', 'Unclassified')
+        ) {
             $stats = $this->computeStats();
             Cache::put(self::DASHBOARD_CACHE_KEY, $stats, self::CACHE_TTL_SECONDS);
         }
@@ -354,20 +358,6 @@ class CatalogStatsService
             ->get()
             ->groupBy('category_id');
 
-        $unclassifiedRows = DB::table('videos')
-            ->whereNotExists(function ($query): void {
-                $query->select(DB::raw(1))
-                    ->from('video_puzzles')
-                    ->whereColumn('video_puzzles.video_id', 'videos.id');
-            })
-            ->select(['id', 'view_count'])
-            ->get();
-
-        $unclassifiedCount = $unclassifiedRows->count();
-        $unclassifiedViews = (int) $unclassifiedRows->sum('view_count');
-        $unclassifiedViewsList = $unclassifiedRows->pluck('view_count')->map(fn ($v): int => (int) $v)->all();
-        $unclassifiedMedianViews = (int) round($this->calculateMedian($unclassifiedViewsList));
-
         $categoryList = [];
         $totalClassifiedCount = 0;
 
@@ -395,24 +385,9 @@ class CatalogStatsService
 
         usort($categoryList, fn (array $a, array $b): int => $b['count'] <=> $a['count']);
 
-        $totalAllPuzzlesAndUnclassified = $totalClassifiedCount + $unclassifiedCount;
-
-        $categoryWithUnclassified = $categoryList;
-        $categoryWithUnclassified[] = [
-            'id' => null,
-            'name' => 'Unclassified',
-            'slug' => 'unclassified',
-            'count' => $unclassifiedCount,
-            'distinct_videos' => $unclassifiedCount,
-            'total_views' => $unclassifiedViews,
-            'median_views' => $unclassifiedMedianViews,
-            'avg_views' => $unclassifiedMedianViews,
-            'is_unclassified' => true,
-        ];
-
-        foreach ($categoryWithUnclassified as &$item) {
-            $item['percentage'] = $totalAllPuzzlesAndUnclassified > 0
-                ? round(($item['count'] / $totalAllPuzzlesAndUnclassified) * 100, 1)
+        foreach ($categoryList as &$item) {
+            $item['percentage'] = $totalClassifiedCount > 0
+                ? round(($item['count'] / $totalClassifiedCount) * 100, 1)
                 : 0;
         }
         unset($item);
@@ -427,18 +402,6 @@ class CatalogStatsService
             ->groupBy('yr', 'categories.name')
             ->get();
 
-        $unclassifiedByYearRaw = DB::table('videos')
-            ->whereNotExists(function ($query): void {
-                $query->select(DB::raw(1))
-                    ->from('video_puzzles')
-                    ->whereColumn('video_puzzles.video_id', 'videos.id');
-            })
-            ->selectRaw("{$yearExpr} as yr, count(*) as count")
-            ->whereNotNull('videos.published_at')
-            ->groupBy('yr')
-            ->get()
-            ->keyBy('yr');
-
         $years = Video::query()
             ->selectRaw("{$yearExpr} as yr")
             ->whereNotNull('published_at')
@@ -450,13 +413,9 @@ class CatalogStatsService
         $yearlyCategories = [];
         foreach ($years as $yr) {
             $catCounts = [];
-            foreach ($categoryWithUnclassified as $catItem) {
-                if ($catItem['is_unclassified']) {
-                    $catCounts[$catItem['name']] = isset($unclassifiedByYearRaw[$yr]) ? (int) $unclassifiedByYearRaw[$yr]->count : 0;
-                } else {
-                    $matching = $classifiedByYearRaw->first(fn ($r): bool => $r->yr === $yr && $r->category_name === $catItem['name']);
-                    $catCounts[$catItem['name']] = $matching ? (int) $matching->count : 0;
-                }
+            foreach ($categoryList as $catItem) {
+                $matching = $classifiedByYearRaw->first(fn ($r): bool => $r->yr === $yr && $r->category_name === $catItem['name']);
+                $catCounts[$catItem['name']] = $matching ? (int) $matching->count : 0;
             }
 
             $yearlyCategories[] = [
@@ -480,18 +439,6 @@ class CatalogStatsService
             $classifiedMonthMap[$row->mo][$row->category_name] = (int) $row->count;
         }
 
-        $unclassifiedByMonthRaw = DB::table('videos')
-            ->whereNotExists(function ($query): void {
-                $query->select(DB::raw(1))
-                    ->from('video_puzzles')
-                    ->whereColumn('video_puzzles.video_id', 'videos.id');
-            })
-            ->selectRaw("{$monthExpr} as mo, count(*) as count")
-            ->whereNotNull('videos.published_at')
-            ->groupBy('mo')
-            ->get()
-            ->keyBy('mo');
-
         $months = [];
         if ($earliestVideo && $latestVideo && $earliestVideo->published_at && $latestVideo->published_at) {
             $cursor = $earliestVideo->published_at->copy()->startOfMonth();
@@ -512,12 +459,8 @@ class CatalogStatsService
                 $label = $mo;
             }
 
-            foreach ($categoryWithUnclassified as $catItem) {
-                if ($catItem['is_unclassified']) {
-                    $catCounts[$catItem['name']] = isset($unclassifiedByMonthRaw[$mo]) ? (int) $unclassifiedByMonthRaw[$mo]->count : 0;
-                } else {
-                    $catCounts[$catItem['name']] = $classifiedMonthMap[$mo][$catItem['name']] ?? 0;
-                }
+            foreach ($categoryList as $catItem) {
+                $catCounts[$catItem['name']] = $classifiedMonthMap[$mo][$catItem['name']] ?? 0;
             }
 
             $monthlyCategories[] = [
@@ -579,7 +522,7 @@ class CatalogStatsService
             'formatStats' => $formatStats,
             'durationBrackets' => $durationBrackets,
             'dayOfWeek' => $dowData,
-            'categoryStats' => $categoryWithUnclassified,
+            'categoryStats' => $categoryList,
             'categoryYearly' => $yearlyCategories,
             'categoryMonthly' => $monthlyCategories,
             'constraintStats' => $constraintStats,

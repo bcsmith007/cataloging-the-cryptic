@@ -348,7 +348,7 @@
                     Total Puzzles by Category
                 </h3>
                 <p class="text-xs text-slate-400 mt-1">
-                    Multi-puzzle videos count each attached puzzle individually as of that video's date. Videos pending puzzle indexing are grouped as Unclassified.
+                    Multi-puzzle videos count each attached puzzle individually as of that video's date. Videos without an attached puzzle are not counted.
                 </p>
             </div>
 
@@ -356,10 +356,7 @@
             <div class="flex flex-wrap items-center gap-2">
                 <div class="inline-flex rounded-lg bg-slate-950 p-1 border border-slate-800 text-xs font-medium">
                     <button id="btn-cat-all" type="button" class="px-3 py-1.5 rounded-md transition-colors bg-emerald-500/20 text-emerald-400 font-semibold" onclick="setCategoryFilter('all')">
-                        All Categories (inc. Unclassified)
-                    </button>
-                    <button id="btn-cat-classified" type="button" class="px-3 py-1.5 rounded-md transition-colors text-slate-400 hover:text-white" onclick="setCategoryFilter('classified')">
-                        Classified Only
+                        All Categories
                     </button>
                     <button id="btn-cat-timeline" type="button" class="px-3 py-1.5 rounded-md transition-colors text-slate-400 hover:text-white" onclick="setCategoryFilter('timeline')">
                         Timeline by Year
@@ -390,7 +387,7 @@
         </div>
 
         {{-- Category Breakdown Cards / Grid --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 pt-2 border-t border-slate-800/80 text-xs">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-800/80 text-xs">
             @foreach ($categoryStats as $cat)
                 <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 flex flex-col justify-between">
                     <div>
@@ -399,9 +396,7 @@
                             <div class="font-bold text-slate-200 truncate" title="{{ $cat['name'] }}">{{ $cat['name'] }}</div>
                         </div>
                         <div class="text-slate-400 mt-1 font-mono">{{ number_format($cat['count']) }} {{ Str::plural('puzzle', $cat['count']) }}</div>
-                        @if (!$cat['is_unclassified'])
-                            <div class="text-slate-400 font-mono text-[11px]">{{ $cat['distinct_videos'] }} videos</div>
-                        @endif
+                        <div class="text-slate-400 font-mono text-[11px]">{{ $cat['distinct_videos'] }} videos</div>
                     </div>
                     <div class="mt-2 pt-2 border-t border-slate-800/60">
                         <span class="text-emerald-400 font-mono font-semibold">{{ $cat['percentage'] }}%</span>
@@ -989,7 +984,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // -------------------------------------------------------------
     // Chart: Puzzle Categories Bar Chart (Dynamic Anti-Collision Colors)
     // -------------------------------------------------------------
-    const UNCLASSIFIED_COLOR = '#64748b';
     const categoryPalette = [
         '#10b981', // emerald
         '#f59e0b', // amber
@@ -1119,14 +1113,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const assigned = {};
         const usedColors = new Set();
-
-        names.forEach(name => {
-            const itemObj = categoryData.find(c => c.name === name);
-            if (name === 'Unclassified' || (itemObj && itemObj.is_unclassified)) {
-                assigned[name] = UNCLASSIFIED_COLOR;
-                usedColors.add(UNCLASSIFIED_COLOR);
-            }
-        });
 
         names.forEach((name, idx) => {
             if (assigned[name]) return;
@@ -1418,10 +1404,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         } else {
-            // Standard Bar Chart (All or Classified Only)
-            const filtered = (currentCategoryFilter === 'classified')
-                ? categoryData.filter(c => !c.is_unclassified)
-                : categoryData;
+            // Standard Bar Chart (All Categories)
+            const filtered = categoryData;
 
             const dynamicColors = resolveDynamicCategoryColors(filtered, categoryYearlyData);
             syncCategoryCardColorDots({ ...categoryColors, ...dynamicColors });
@@ -1460,10 +1444,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     const item = filtered[ctx.dataIndex];
                                     const val = ctx.raw || 0;
                                     if (val <= 0) return null;
-                                    const videosText = item.is_unclassified
-                                        ? ''
-                                        : ' (' + item.distinct_videos.toLocaleString() + ' distinct videos)';
-                                    return ' ' + val.toLocaleString() + ' puzzles' + videosText;
+                                    return ' ' + val.toLocaleString() + ' puzzles (' + item.distinct_videos.toLocaleString() + ' distinct videos)';
                                 }
                             }
                         }
@@ -1492,7 +1473,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     window.setCategoryFilter = function (filter) {
         currentCategoryFilter = filter;
-        ['all', 'classified', 'timeline', 'monthly'].forEach(f => {
+        ['all', 'timeline', 'monthly'].forEach(f => {
             const btn = document.getElementById('btn-cat-' + f);
             if (btn) {
                 if (f === filter) {
