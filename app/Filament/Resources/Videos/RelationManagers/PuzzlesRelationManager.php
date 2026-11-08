@@ -15,6 +15,7 @@ use App\Models\PuzzleLink;
 use App\Models\Setter;
 use App\Models\Video;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -23,6 +24,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\DetachAction;
 use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -31,9 +33,12 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\IconPosition;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 /**
  * Relation manager for puzzles contained within a video.
@@ -570,9 +575,116 @@ class PuzzlesRelationManager extends RelationManager
                             ->dehydrateStateUsing(fn ($state) => filled($state) ? Bookmark::parseTimecodeToSeconds($state) : null)
                             ->helperText('Time taken (HH:MM:SS or MM:SS, omitting units that do not exist) to solve this puzzle (saved as seconds).'),
                     ]),
-                CreateAction::make()
-                    ->modalHeading('Add Puzzle to Video')
-                    ->modalWidth('7xl'),
+                ActionGroup::make([
+                    CreateAction::make()
+                        ->label('New Puzzle')
+                        ->icon('heroicon-m-plus')
+                        ->modalHeading('Add Puzzle to Video')
+                        ->modalWidth('7xl')
+                        ->mountUsing(function (Schema $schema, array $arguments): void {
+                            $schema->fill();
+
+                            if (! empty($arguments['preset'])) {
+                                $presetState = $this->buildCreatePuzzlePresetState($arguments);
+                                $schema->rawState([
+                                    ...$schema->getRawState(),
+                                    ...$presetState,
+                                ]);
+                            }
+                        }),
+
+                    Action::make('create_wordle')
+                        ->label('New Wordle Puzzle')
+                        ->icon('heroicon-m-squares-2x2')
+                        ->modalHeading('New Wordle Puzzle')
+                        ->modalDescription('Select the Wordle puzzle date to prefill the puzzle details and NYT Wordle link.')
+                        ->modalSubmitActionLabel('Continue')
+                        ->modalWidth('md')
+                        ->schema([
+                            DatePicker::make('puzzle_date')
+                                ->label('Puzzle Date')
+                                ->default(fn (): string => ($this->getOwnerRecord()?->effective_published_at ?? now())->toDateString())
+                                ->required(),
+                        ])
+                        ->action(function (array $data): void {
+                            $this->replaceMountedAction('create', [
+                                'preset' => 'wordle',
+                                'date' => $data['puzzle_date'],
+                            ], context: ['table' => true]);
+                        }),
+
+                    Action::make('create_minutecryptic')
+                        ->label('New MinuteCryptic Puzzle')
+                        ->icon('heroicon-m-clock')
+                        ->modalHeading('New MinuteCryptic Puzzle')
+                        ->modalDescription('Select the MinuteCryptic puzzle date to prefill the puzzle details.')
+                        ->modalSubmitActionLabel('Continue')
+                        ->modalWidth('md')
+                        ->schema([
+                            DatePicker::make('puzzle_date')
+                                ->label('Puzzle Date')
+                                ->default(fn (): string => ($this->getOwnerRecord()?->effective_published_at ?? now())->toDateString())
+                                ->required(),
+                        ])
+                        ->action(function (array $data): void {
+                            $this->replaceMountedAction('create', [
+                                'preset' => 'minutecryptic',
+                                'date' => $data['puzzle_date'],
+                            ], context: ['table' => true]);
+                        }),
+
+                    Action::make('create_gridogram')
+                        ->label('New Gridogram Puzzle')
+                        ->icon('heroicon-m-table-cells')
+                        ->modalHeading('New Gridogram Puzzle')
+                        ->modalDescription('Select the Gridogram puzzle date to prefill the puzzle details.')
+                        ->modalSubmitActionLabel('Continue')
+                        ->modalWidth('md')
+                        ->schema([
+                            DatePicker::make('puzzle_date')
+                                ->label('Puzzle Date')
+                                ->default(fn (): string => ($this->getOwnerRecord()?->effective_published_at ?? now())->toDateString())
+                                ->required(),
+                        ])
+                        ->action(function (array $data): void {
+                            $this->replaceMountedAction('create', [
+                                'preset' => 'gridogram',
+                                'date' => $data['puzzle_date'],
+                            ], context: ['table' => true]);
+                        }),
+
+                    Action::make('create_connections')
+                        ->label('New Connections Puzzle')
+                        ->icon('heroicon-m-rectangle-group')
+                        ->modalHeading('New Connections Puzzle')
+                        ->modalDescription('Select the Connections puzzle date to prefill the puzzle details and NYT Connections link.')
+                        ->modalSubmitActionLabel('Continue')
+                        ->modalWidth('md')
+                        ->schema([
+                            DatePicker::make('puzzle_date')
+                                ->label('Puzzle Date')
+                                ->default(fn (): string => ($this->getOwnerRecord()?->effective_published_at ?? now())->toDateString())
+                                ->required(),
+                        ])
+                        ->action(function (array $data): void {
+                            $this->replaceMountedAction('create', [
+                                'preset' => 'connections',
+                                'date' => $data['puzzle_date'],
+                            ], context: ['table' => true]);
+                        }),
+                ])
+                    ->label('New puzzle')
+                    ->icon('heroicon-m-chevron-down')
+                    ->iconPosition(IconPosition::After)
+                    ->color('primary')
+                    ->button()
+                    ->extraAttributes([
+                        'x-on:mousedown.stop' => '$wire.mountAction(\'create\', [], { table: true }); close($event)',
+                    ])
+                    ->extraDropdownAttributes([
+                        'x-on:mouseenter' => 'open($event)',
+                        'x-on:mouseleave' => 'close($event)',
+                    ]),
             ])
             ->recordActions([
                 EditAction::make()
@@ -587,5 +699,107 @@ class PuzzlesRelationManager extends RelationManager
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * Build prefilled form state for shortcut puzzle presets (Wordle and MinuteCryptic).
+     *
+     * @param  array<string, mixed>  $arguments
+     * @return array<string, mixed>
+     */
+    protected function buildCreatePuzzlePresetState(array $arguments): array
+    {
+        $preset = (string) ($arguments['preset'] ?? '');
+        $rawDate = $arguments['date'] ?? null;
+        $date = filled($rawDate) ? Carbon::parse((string) $rawDate) : ($this->getOwnerRecord()?->effective_published_at ?? now());
+        $formattedDate = $date->format('F j, Y');
+
+        if ($preset === 'wordle') {
+            $category = Category::firstOrCreate(
+                ['slug' => 'wordle'],
+                ['name' => 'Wordle']
+            );
+
+            $linkType = LinkType::firstOrCreate(
+                ['slug' => 'wordle'],
+                ['name' => 'Wordle']
+            );
+
+            $title = 'Wordle - '.$formattedDate;
+            $url = 'https://www.nytimes.com/games/wordle/'.$date->format('Y-m-d');
+
+            return [
+                'title' => $title,
+                'slug' => Puzzle::generateSlug($title),
+                'category_id' => $category->id,
+                'links' => [
+                    (string) Str::uuid() => [
+                        'link_type' => $linkType->slug,
+                        'url' => $url,
+                    ],
+                ],
+            ];
+        }
+
+        if ($preset === 'minutecryptic') {
+            $category = Category::firstOrCreate(
+                ['slug' => 'minutecryptic'],
+                ['name' => 'MinuteCryptic']
+            );
+
+            $title = 'MinuteCryptic - '.$formattedDate;
+
+            return [
+                'title' => $title,
+                'slug' => Puzzle::generateSlug($title),
+                'category_id' => $category->id,
+                'links' => [],
+            ];
+        }
+
+        if ($preset === 'gridogram') {
+            $category = Category::firstOrCreate(
+                ['slug' => 'gridogram'],
+                ['name' => 'Gridogram']
+            );
+
+            $title = 'Gridogram - '.$formattedDate;
+
+            return [
+                'title' => $title,
+                'slug' => Puzzle::generateSlug($title),
+                'category_id' => $category->id,
+                'links' => [],
+            ];
+        }
+
+        if ($preset === 'connections') {
+            $category = Category::firstOrCreate(
+                ['slug' => 'connections'],
+                ['name' => 'Connections']
+            );
+
+            $linkType = LinkType::firstOrCreate(
+                ['slug' => 'connections'],
+                ['name' => 'Connections']
+            );
+
+            $title = 'Connections - '.$formattedDate;
+            $url = 'https://www.nytimes.com/games/connections/'.$date->format('Y-m-d');
+
+            return [
+                'title' => $title,
+                'slug' => Puzzle::generateSlug($title),
+                'category_id' => $category->id,
+                'links' => [
+                    (string) Str::uuid() => [
+                        'link_type' => $linkType->slug,
+                        'url' => $url,
+                    ],
+                ],
+            ];
+        }
+
+        return [];
     }
 }

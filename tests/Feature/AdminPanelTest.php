@@ -1914,4 +1914,159 @@ class AdminPanelTest extends TestCase
         $this->assertSame('2026-10-15 18:00:00', $video->fresh()->created_at->format('Y-m-d H:i:s'));
         $this->assertSame('2026-10-15 18:00:00', $log->fresh()->started_at->format('Y-m-d H:i:s'));
     }
+
+    /**
+     * Test that the Wordle and MinuteCryptic shortcuts on PuzzlesRelationManager prompt for a date
+     * and open the New Puzzle modal prefilled with the formatted title, category, and Wordle link.
+     */
+    public function test_puzzles_relation_manager_wordle_and_minutecryptic_shortcuts_prefill_and_save_puzzles(): void
+    {
+        $user = User::factory()->admin()->create();
+        $this->actingAs($user);
+
+        $video = Video::factory()->create([
+            'title' => 'Daily Wordle & MinuteCryptic Solve',
+            'slug' => 'daily-wordle-minutecryptic-solve',
+            'published_at' => Carbon::parse('2026-11-06 12:00:00', 'UTC'),
+        ]);
+
+        // 1. Test New Wordle Puzzle shortcut
+        $component = Livewire::test(PuzzlesRelationManager::class, [
+            'ownerRecord' => $video,
+            'pageClass' => EditVideo::class,
+        ]);
+
+        $component->assertSee('New Wordle Puzzle')
+            ->assertSee('New MinuteCryptic Puzzle')
+            ->assertSee('New Gridogram Puzzle')
+            ->assertSee('New Connections Puzzle');
+
+        $component->mountTableAction('create_wordle')
+            ->setTableActionData(['puzzle_date' => '2026-11-06'])
+            ->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        // After submitting the date modal, the 'create' modal should be mounted and prefilled
+        $mountedData = $component->get('mountedActions.0.data');
+        $wordleCategory = Category::where('slug', 'wordle')->first();
+        $this->assertNotNull($wordleCategory);
+        $this->assertSame('Wordle - November 6, 2026', $mountedData['title']);
+        $this->assertSame('wordle-november-6-2026', $mountedData['slug']);
+        $this->assertSame($wordleCategory->id, $mountedData['category_id']);
+        $this->assertCount(1, $mountedData['links']);
+        $firstLink = reset($mountedData['links']);
+        $this->assertSame('wordle', $firstLink['link_type']);
+        $this->assertSame('https://www.nytimes.com/games/wordle/2026-11-06', $firstLink['url']);
+
+        // Reviewing and clicking save creates the Wordle puzzle and link
+        $component->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $wordlePuzzle = Puzzle::where('slug', 'wordle-november-6-2026')->first();
+        $this->assertNotNull($wordlePuzzle);
+        $this->assertSame('Wordle - November 6, 2026', $wordlePuzzle->title);
+        $this->assertSame($wordleCategory->id, $wordlePuzzle->category_id);
+        $this->assertDatabaseHas('puzzle_links', [
+            'puzzle_id' => $wordlePuzzle->id,
+            'link_type' => 'wordle',
+            'url' => 'https://www.nytimes.com/games/wordle/2026-11-06',
+        ]);
+        $this->assertDatabaseHas('video_puzzles', [
+            'video_id' => $video->id,
+            'puzzle_id' => $wordlePuzzle->id,
+            'order_in_video' => 1,
+        ]);
+
+        // 2. Test New MinuteCryptic Puzzle shortcut
+        $component->mountTableAction('create_minutecryptic')
+            ->setTableActionData(['puzzle_date' => '2026-11-06'])
+            ->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $mcMountedData = $component->get('mountedActions.0.data');
+        $mcCategory = Category::where('slug', 'minutecryptic')->first();
+        $this->assertNotNull($mcCategory);
+        $this->assertSame('MinuteCryptic - November 6, 2026', $mcMountedData['title']);
+        $this->assertSame('minutecryptic-november-6-2026', $mcMountedData['slug']);
+        $this->assertSame($mcCategory->id, $mcMountedData['category_id']);
+        $this->assertEmpty($mcMountedData['links']);
+
+        // Reviewing and clicking save creates the MinuteCryptic puzzle with no links
+        $component->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $mcPuzzle = Puzzle::where('slug', 'minutecryptic-november-6-2026')->first();
+        $this->assertNotNull($mcPuzzle);
+        $this->assertSame('MinuteCryptic - November 6, 2026', $mcPuzzle->title);
+        $this->assertSame($mcCategory->id, $mcPuzzle->category_id);
+        $this->assertSame(0, $mcPuzzle->links()->count());
+        $this->assertDatabaseHas('video_puzzles', [
+            'video_id' => $video->id,
+            'puzzle_id' => $mcPuzzle->id,
+            'order_in_video' => 2,
+        ]);
+
+        // 3. Test New Gridogram Puzzle shortcut
+        $component->mountTableAction('create_gridogram')
+            ->setTableActionData(['puzzle_date' => '2026-11-06'])
+            ->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $gridMountedData = $component->get('mountedActions.0.data');
+        $gridCategory = Category::where('slug', 'gridogram')->first();
+        $this->assertNotNull($gridCategory);
+        $this->assertSame('Gridogram - November 6, 2026', $gridMountedData['title']);
+        $this->assertSame('gridogram-november-6-2026', $gridMountedData['slug']);
+        $this->assertSame($gridCategory->id, $gridMountedData['category_id']);
+        $this->assertEmpty($gridMountedData['links']);
+
+        $component->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $gridPuzzle = Puzzle::where('slug', 'gridogram-november-6-2026')->first();
+        $this->assertNotNull($gridPuzzle);
+        $this->assertSame('Gridogram - November 6, 2026', $gridPuzzle->title);
+        $this->assertSame($gridCategory->id, $gridPuzzle->category_id);
+        $this->assertSame(0, $gridPuzzle->links()->count());
+        $this->assertDatabaseHas('video_puzzles', [
+            'video_id' => $video->id,
+            'puzzle_id' => $gridPuzzle->id,
+            'order_in_video' => 3,
+        ]);
+
+        // 4. Test New Connections Puzzle shortcut
+        $component->mountTableAction('create_connections')
+            ->setTableActionData(['puzzle_date' => '2026-11-01'])
+            ->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $connMountedData = $component->get('mountedActions.0.data');
+        $connCategory = Category::where('slug', 'connections')->first();
+        $this->assertNotNull($connCategory);
+        $this->assertSame('Connections - November 1, 2026', $connMountedData['title']);
+        $this->assertSame('connections-november-1-2026', $connMountedData['slug']);
+        $this->assertSame($connCategory->id, $connMountedData['category_id']);
+        $this->assertCount(1, $connMountedData['links']);
+        $connLink = reset($connMountedData['links']);
+        $this->assertSame('connections', $connLink['link_type']);
+        $this->assertSame('https://www.nytimes.com/games/connections/2026-11-01', $connLink['url']);
+
+        $component->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $connPuzzle = Puzzle::where('slug', 'connections-november-1-2026')->first();
+        $this->assertNotNull($connPuzzle);
+        $this->assertSame('Connections - November 1, 2026', $connPuzzle->title);
+        $this->assertSame($connCategory->id, $connPuzzle->category_id);
+        $this->assertDatabaseHas('puzzle_links', [
+            'puzzle_id' => $connPuzzle->id,
+            'link_type' => 'connections',
+            'url' => 'https://www.nytimes.com/games/connections/2026-11-01',
+        ]);
+        $this->assertDatabaseHas('video_puzzles', [
+            'video_id' => $video->id,
+            'puzzle_id' => $connPuzzle->id,
+            'order_in_video' => 4,
+        ]);
+    }
 }
