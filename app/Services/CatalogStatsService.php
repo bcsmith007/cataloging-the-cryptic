@@ -19,7 +19,7 @@ class CatalogStatsService
     /**
      * Cache key for the full analytics dashboard summary.
      */
-    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v6';
+    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v7';
 
     /**
      * Cache key for the homepage counter bar statistics.
@@ -74,7 +74,7 @@ class CatalogStatsService
 
         if (
             ! is_array($stats)
-            || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'])
+            || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'], $stats['hostCumulativeMonthly'])
             || collect($stats['categoryStats'] ?? [])->contains('name', 'Unclassified')
         ) {
             $stats = $this->computeStats();
@@ -82,6 +82,7 @@ class CatalogStatsService
         }
 
         $stats['categoryMonthly'] = $stats['categoryMonthly'] ?? [];
+        $stats['hostCumulativeMonthly'] = $stats['hostCumulativeMonthly'] ?? [];
         $stats['constraintStats'] = $stats['constraintStats'] ?? [];
         $stats['totalConstraintOccurrences'] = $stats['totalConstraintOccurrences'] ?? 0;
         $stats['totalUniqueConstraints'] = $stats['totalUniqueConstraints'] ?? count($stats['constraintStats'] ?? []);
@@ -142,6 +143,16 @@ class CatalogStatsService
         $earliestVideo = $publishedVideos->first();
         $latestVideo = $publishedVideos->last();
 
+        $months = [];
+        if ($earliestVideo && $latestVideo && $earliestVideo->published_at && $latestVideo->published_at) {
+            $cursor = $earliestVideo->published_at->copy()->startOfMonth();
+            $endMonth = $latestVideo->published_at->copy()->startOfMonth();
+            while ($cursor->lte($endMonth)) {
+                $months[] = $cursor->format('Y-m');
+                $cursor->addMonth();
+            }
+        }
+
         // Yearly Trend (All-Time)
         $yearlyGrouped = $publishedVideos->groupBy(fn (Video $v): string => $v->published_at->format('Y'))->sortKeys();
         $yearly = $yearlyGrouped->map(function (Collection $group, $yr): array {
@@ -162,12 +173,11 @@ class CatalogStatsService
             ];
         })->values()->all();
 
-        // Monthly Trend (Last 36 Months)
-        $cutoff = now()->subMonths(36);
-        $monthlyVideos = $publishedVideos->filter(fn (Video $v): bool => $v->published_at >= $cutoff);
-        $monthlyGrouped = $monthlyVideos->groupBy(fn (Video $v): string => $v->published_at->format('Y-m'))->sortKeys();
+        // Monthly Trend (All-Time, for 24-Month Sliding Window)
+        $monthlyGrouped = $publishedVideos->groupBy(fn (Video $v): string => $v->published_at->format('Y-m'))->sortKeys();
 
-        $monthly = $monthlyGrouped->map(function (Collection $group, $monthKey): array {
+        $monthly = [];
+        foreach ($months as $monthKey) {
             $key = (string) $monthKey;
             try {
                 $label = Carbon::createFromFormat('!Y-m', $key)->format('M Y');
@@ -175,13 +185,15 @@ class CatalogStatsService
                 $label = $key;
             }
 
+            /** @var Collection<int, Video> $group */
+            $group = $monthlyGrouped->get($key, collect());
             $views = $group->pluck('view_count')->map(fn ($v): int => (int) $v)->all();
             $durs = $group->where('duration_seconds', '>', 0)->pluck('duration_seconds')->map(fn ($d): int => (int) $d)->all();
             $medViews = (int) round($this->calculateMedian($views));
             $medDurSec = (int) round($this->calculateMedian($durs));
             $medDurMin = round($medDurSec / 60, 1);
 
-            return [
+            $monthly[] = [
                 'key' => $key,
                 'label' => $label,
                 'count' => $group->count(),
@@ -191,7 +203,66 @@ class CatalogStatsService
                 'avg_views' => $medViews,
                 'avg_duration_minutes' => $medDurMin,
             ];
-        })->values()->all();
+        }
+
+        // -------------------------------------------------------------
+        // Cumulative Host Appearances (Simon & Mark) Over Time
+        // -------------------------------------------------------------
+        $simonMonthlyRaw = DB::table('video_hosts')
+            ->join('videos', 'video_hosts.video_id', '=', 'videos.id')
+            ->join('hosts', 'video_hosts.host_id', '=', 'hosts.id')
+            ->where('videos.access_level', '!=', 'private')
+            ->whereNotNull('videos.published_at')
+            ->where(function ($query): void {
+                $query->whereIn('hosts.slug', ['simon-anthony', 'simon'])
+                    ->orWhereRaw('LOWER(hosts.name) LIKE ?', ['%simon%']);
+            })
+            ->selectRaw("{$monthExpr} as mo, count(distinct videos.id) as count")
+            ->groupBy('mo')
+            ->pluck('count', 'mo')
+            ->all();
+
+        $markMonthlyRaw = DB::table('video_hosts')
+            ->join('videos', 'video_hosts.video_id', '=', 'videos.id')
+            ->join('hosts', 'video_hosts.host_id', '=', 'hosts.id')
+            ->where('videos.access_level', '!=', 'private')
+            ->whereNotNull('videos.published_at')
+            ->where(function ($query): void {
+                $query->whereIn('hosts.slug', ['mark-goodliffe', 'mark'])
+                    ->orWhereRaw('LOWER(hosts.name) LIKE ?', ['%mark%']);
+            })
+            ->selectRaw("{$monthExpr} as mo, count(distinct videos.id) as count")
+            ->groupBy('mo')
+            ->pluck('count', 'mo')
+            ->all();
+
+        $simonCumulative = 0;
+        $markCumulative = 0;
+        $hostCumulativeMonthly = [];
+
+        foreach ($months as $mo) {
+            $label = $mo;
+            try {
+                $label = Carbon::createFromFormat('!Y-m', $mo)->format('M Y');
+            } catch (\Throwable) {
+                $label = $mo;
+            }
+
+            $simonMonthCount = (int) ($simonMonthlyRaw[$mo] ?? 0);
+            $markMonthCount = (int) ($markMonthlyRaw[$mo] ?? 0);
+
+            $simonCumulative += $simonMonthCount;
+            $markCumulative += $markMonthCount;
+
+            $hostCumulativeMonthly[] = [
+                'month' => (string) $mo,
+                'label' => $label,
+                'simon' => $simonCumulative,
+                'mark' => $markCumulative,
+                'simon_monthly' => $simonMonthCount,
+                'mark_monthly' => $markMonthCount,
+            ];
+        }
 
         // Video Format Breakdown
         $formatLabels = [
@@ -454,16 +525,6 @@ class CatalogStatsService
             $classifiedMonthMap[$row->mo][$row->category_name] = (int) $row->count;
         }
 
-        $months = [];
-        if ($earliestVideo && $latestVideo && $earliestVideo->published_at && $latestVideo->published_at) {
-            $cursor = $earliestVideo->published_at->copy()->startOfMonth();
-            $endMonth = $latestVideo->published_at->copy()->startOfMonth();
-            while ($cursor->lte($endMonth)) {
-                $months[] = $cursor->format('Y-m');
-                $cursor->addMonth();
-            }
-        }
-
         $monthlyCategories = [];
         foreach ($months as $mo) {
             $catCounts = [];
@@ -534,6 +595,7 @@ class CatalogStatsService
             ],
             'yearly' => $yearly,
             'monthly' => $monthly,
+            'hostCumulativeMonthly' => $hostCumulativeMonthly,
             'formatStats' => $formatStats,
             'durationBrackets' => $durationBrackets,
             'dayOfWeek' => $dowData,

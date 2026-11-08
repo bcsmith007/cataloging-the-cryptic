@@ -211,7 +211,20 @@
                         By Year (All-Time)
                     </button>
                     <button id="btn-period-month" type="button" class="px-3 py-1.5 rounded-md transition-colors text-slate-400 hover:text-white" onclick="setTimePeriod('month')">
-                        By Month (Last 36 Months)
+                        By Month
+                    </button>
+                </div>
+
+                {{-- Monthly 24-Month Window Navigation (active when By Month is selected) --}}
+                <div id="timeline-monthly-nav" class="hidden items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs font-mono">
+                    <button id="btn-timeline-prev-month" type="button" class="p-1.5 rounded-md hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Previous 24 months (shift back 1 month)" onclick="shiftTimelineMonthlyWindow(-1)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
+                    <span id="timeline-monthly-range-label" class="px-2 text-slate-300 font-semibold select-none min-w-[130px] text-center text-[11px]">
+                        --
+                    </span>
+                    <button id="btn-timeline-next-month" type="button" class="p-1.5 rounded-md hover:bg-slate-800 text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors" title="Next 24 months (shift forward 1 month)" onclick="shiftTimelineMonthlyWindow(1)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
                     </button>
                 </div>
 
@@ -246,6 +259,40 @@
             <div>
                 <strong class="text-slate-200">Median Duration Growth:</strong> Video solve lengths expanded from ~17 mins in 2017 to a steady 30–35 minutes in modern uploads.
             </div>
+        </div>
+    </div>
+
+    {{-- Main Section 1B: Cumulative Host Appearances Over Time (Simon & Mark Line Chart) --}}
+    @php
+        $latestHostMonth = !empty($hostCumulativeMonthly) ? end($hostCumulativeMonthly) : null;
+        $simonTotalAppearances = (int) ($latestHostMonth['simon'] ?? 0);
+        $markTotalAppearances = (int) ($latestHostMonth['mark'] ?? 0);
+    @endphp
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800/80 pb-4">
+            <div>
+                <h2 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                    Cumulative Video Appearances: Simon & Mark
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">
+                    Monthly cumulative number of videos featuring Simon Anthony and Mark Goodliffe since the beginning of channel history.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('videos.index', ['host' => 'simon']) }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors font-mono flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                    Simon Anthony: {{ number_format($simonTotalAppearances) }} {{ Str::plural('video', $simonTotalAppearances) }}
+                </a>
+                <a href="{{ route('videos.index', ['host' => 'mark']) }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20 transition-colors font-mono flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                    Mark Goodliffe: {{ number_format($markTotalAppearances) }} {{ Str::plural('video', $markTotalAppearances) }}
+                </a>
+            </div>
+        </div>
+
+        <div class="relative w-full" style="height: 360px;">
+            <canvas id="hostCumulativeChart"></canvas>
         </div>
     </div>
 
@@ -629,6 +676,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Inject Chart data from server
     const yearlyData = @json($yearly);
     const monthlyData = @json($monthly);
+    const hostCumulativeData = @json($hostCumulativeMonthly ?? []);
     const formatData = @json(array_values($formatStats));
     const durationData = @json($durationBrackets);
     const dayOfWeekData = @json($dayOfWeek);
@@ -642,22 +690,84 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentMetric = 'views';
     let timelineChart = null;
 
+    const TIMELINE_MONTHLY_WINDOW_SIZE = 24;
+    let timelineMonthlyWindowEnd = monthlyData.length;
+
     // Chart.js default dark theme colors
     Chart.defaults.color = '#94a3b8';
     Chart.defaults.font.family = '"Plus Jakarta Sans", sans-serif';
 
+    function updateTimelineMonthlyNavControls() {
+        const prevBtn = document.getElementById('btn-timeline-prev-month');
+        const nextBtn = document.getElementById('btn-timeline-next-month');
+        const rangeLabel = document.getElementById('timeline-monthly-range-label');
+
+        if (!rangeLabel) return;
+
+        const totalMonths = monthlyData.length;
+        if (totalMonths === 0) {
+            rangeLabel.textContent = 'No data';
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            return;
+        }
+
+        const startIdx = Math.max(0, timelineMonthlyWindowEnd - TIMELINE_MONTHLY_WINDOW_SIZE);
+        const endIdx = timelineMonthlyWindowEnd;
+        const currentSlice = monthlyData.slice(startIdx, endIdx);
+
+        if (currentSlice.length === 0) {
+            rangeLabel.textContent = 'No data';
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            return;
+        }
+
+        const firstLabel = currentSlice[0].label;
+        const lastLabel = currentSlice[currentSlice.length - 1].label;
+        rangeLabel.textContent = (firstLabel === lastLabel) ? firstLabel : `${firstLabel} – ${lastLabel}`;
+
+        if (prevBtn) {
+            prevBtn.disabled = (startIdx <= 0);
+        }
+        if (nextBtn) {
+            nextBtn.disabled = (timelineMonthlyWindowEnd >= totalMonths);
+        }
+    }
+
+    window.shiftTimelineMonthlyWindow = function (step) {
+        const totalMonths = monthlyData.length;
+        if (totalMonths === 0) return;
+
+        const minEnd = Math.min(TIMELINE_MONTHLY_WINDOW_SIZE, totalMonths);
+        const newEnd = timelineMonthlyWindowEnd + step;
+
+        if (newEnd < minEnd || newEnd > totalMonths) {
+            return;
+        }
+
+        timelineMonthlyWindowEnd = newEnd;
+        updateTimelineMonthlyNavControls();
+        renderTimelineChart();
+    };
+
     // -------------------------------------------------------------
-    // Chart 1: Timeline Chart (Yearly vs Monthly)
+    // Chart 1: Timeline Chart (Yearly vs Monthly 24-Month Bar Window)
     // -------------------------------------------------------------
     function renderTimelineChart() {
-        const dataSet = (currentPeriod === 'year') ? yearlyData : monthlyData;
+        let dataSet = yearlyData;
+        if (currentPeriod === 'month') {
+            const startIdx = Math.max(0, timelineMonthlyWindowEnd - TIMELINE_MONTHLY_WINDOW_SIZE);
+            const endIdx = timelineMonthlyWindowEnd;
+            dataSet = monthlyData.slice(startIdx, endIdx);
+            updateTimelineMonthlyNavControls();
+        }
         const labels = dataSet.map(d => d.year || d.label);
 
         let dataValues = [];
         let labelName = '';
         let colorBorder = '#10b981';
         let colorBg = 'rgba(16, 185, 129, 0.15)';
-        let isCurrency = false;
 
         if (currentMetric === 'views') {
             dataValues = dataSet.map(d => d.views);
@@ -683,7 +793,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         timelineChart = new Chart(ctx, {
-            type: currentPeriod === 'year' ? 'bar' : 'line',
+            type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
@@ -692,12 +802,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     borderColor: colorBorder,
                     backgroundColor: colorBg,
                     borderWidth: 2,
-                    fill: currentPeriod === 'month',
-                    tension: 0.35,
-                    borderRadius: currentPeriod === 'year' ? 6 : 0,
-                    pointBackgroundColor: colorBorder,
-                    pointRadius: currentPeriod === 'year' ? 0 : 3,
-                    pointHoverRadius: 6,
+                    borderRadius: 6,
                 }]
             },
             options: {
@@ -765,6 +870,18 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('btn-period-month').className = (period === 'month')
             ? 'px-3 py-1.5 rounded-md transition-colors bg-emerald-500/20 text-emerald-400 font-semibold'
             : 'px-3 py-1.5 rounded-md transition-colors text-slate-400 hover:text-white';
+
+        const timelineMonthlyNav = document.getElementById('timeline-monthly-nav');
+        if (timelineMonthlyNav) {
+            if (period === 'month') {
+                timelineMonthlyNav.classList.remove('hidden');
+                timelineMonthlyNav.classList.add('flex');
+            } else {
+                timelineMonthlyNav.classList.add('hidden');
+                timelineMonthlyNav.classList.remove('flex');
+            }
+        }
+
         renderTimelineChart();
     };
 
@@ -782,6 +899,118 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     renderTimelineChart();
+
+    // -------------------------------------------------------------
+    // Chart 1B: Cumulative Host Appearances Line Chart (All-Time Monthly)
+    // -------------------------------------------------------------
+    const hostCumulativeCanvas = document.getElementById('hostCumulativeChart');
+    if (hostCumulativeCanvas) {
+        const hostCumulativeCtx = hostCumulativeCanvas.getContext('2d');
+        new Chart(hostCumulativeCtx, {
+            type: 'line',
+            data: {
+                labels: hostCumulativeData.map(d => d.label),
+                datasets: [
+                    {
+                        label: 'Simon Anthony',
+                        data: hostCumulativeData.map(d => d.simon),
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                        borderWidth: 2.5,
+                        tension: 0.25,
+                        fill: false,
+                        pointBackgroundColor: '#10b981',
+                        pointRadius: 2,
+                        pointHoverRadius: 5,
+                    },
+                    {
+                        label: 'Mark Goodliffe',
+                        data: hostCumulativeData.map(d => d.mark),
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.12)',
+                        borderWidth: 2.5,
+                        tension: 0.25,
+                        fill: false,
+                        pointBackgroundColor: '#0ea5e9',
+                        pointRadius: 2,
+                        pointHoverRadius: 5,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            boxWidth: 12,
+                            color: '#cbd5e1',
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#020617',
+                        borderColor: '#1e293b',
+                        borderWidth: 1,
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        padding: 10,
+                        callbacks: {
+                            label: function (ctx) {
+                                const val = Number(ctx.raw) || 0;
+                                const item = hostCumulativeData[ctx.dataIndex];
+                                const monthlyDelta = item
+                                    ? (ctx.datasetIndex === 0 ? (item.simon_monthly || 0) : (item.mark_monthly || 0))
+                                    : 0;
+                                const deltaSuffix = monthlyDelta > 0 ? ` (+${monthlyDelta.toLocaleString()} this month)` : '';
+                                return ` ${ctx.dataset.label}: ${val.toLocaleString()} videos${deltaSuffix}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(51, 65, 85, 0.25)',
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 11 },
+                            maxRotation: 45,
+                            autoSkip: true,
+                            maxTicksLimit: 18,
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(51, 65, 85, 0.25)',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Cumulative Videos',
+                            color: '#94a3b8',
+                            font: { size: 11 }
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 11 },
+                            callback: function (value) {
+                                if (value >= 1000) return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     // -------------------------------------------------------------
     // Chart 2: Format Donut Chart
