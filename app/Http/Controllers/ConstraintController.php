@@ -31,6 +31,7 @@ class ConstraintController extends Controller
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_constraints.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_constraints.constraint_id', 'constraints.id')
+            ->where('videos.access_level', '!=', 'private')
             ->whereRaw("{$effectiveDateSql} IS NOT NULL")
             ->selectRaw('COUNT(DISTINCT videos.id)');
 
@@ -38,6 +39,7 @@ class ConstraintController extends Controller
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_constraints.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_constraints.constraint_id', 'constraints.id')
+            ->where('videos.access_level', '!=', 'private')
             ->whereRaw("{$effectiveDateSql} IS NOT NULL")
             ->selectRaw("MIN({$effectiveDateSql})");
 
@@ -45,6 +47,7 @@ class ConstraintController extends Controller
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_constraints.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_constraints.constraint_id', 'constraints.id')
+            ->where('videos.access_level', '!=', 'private')
             ->whereRaw("{$effectiveDateSql} IS NOT NULL")
             ->selectRaw("CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX({$effectiveDateSql}) ELSE NULL END");
 
@@ -94,7 +97,7 @@ class ConstraintController extends Controller
         $constraints->getCollection()->load([
             'puzzles' => function ($puzzleQuery): void {
                 $puzzleQuery->with(['videos' => function ($videoQuery): void {
-                    $videoQuery->with('patreonPost')->orderByEffectivePublishedAt('asc')->orderBy('id', 'asc');
+                    $videoQuery->publiclyVisible()->with('patreonPost')->orderByEffectivePublishedAt('asc')->orderBy('id', 'asc');
                 }]);
             },
         ]);
@@ -138,6 +141,7 @@ class ConstraintController extends Controller
     public function show(Constraint $constraint): View
     {
         $baseVideosQuery = Video::query()
+            ->publiclyVisible()
             ->whereHas('puzzles.constraints', function ($query) use ($constraint): void {
                 $query->where('constraints.id', $constraint->id);
             })
@@ -162,6 +166,7 @@ class ConstraintController extends Controller
         $puzzlesCount = $constraint->puzzles()->count();
 
         $videos = Video::query()
+            ->publiclyVisible()
             ->whereHas('puzzles.constraints', function ($query) use ($constraint): void {
                 $query->where('constraints.id', $constraint->id);
             })

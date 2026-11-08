@@ -31,6 +31,7 @@ class SetterController extends Controller
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_setters.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_setters.setter_id', 'setters.id')
+            ->where('videos.access_level', '!=', 'private')
             ->whereRaw("{$effectiveDateSql} IS NOT NULL")
             ->selectRaw("MIN({$effectiveDateSql})");
 
@@ -38,6 +39,7 @@ class SetterController extends Controller
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_setters.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_setters.setter_id', 'setters.id')
+            ->where('videos.access_level', '!=', 'private')
             ->whereRaw("{$effectiveDateSql} IS NOT NULL")
             ->selectRaw("CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX({$effectiveDateSql}) ELSE NULL END");
 
@@ -82,7 +84,7 @@ class SetterController extends Controller
         $setters->getCollection()->load([
             'puzzles' => function ($puzzleQuery): void {
                 $puzzleQuery->with(['videos' => function ($videoQuery): void {
-                    $videoQuery->with('patreonPost')->orderByEffectivePublishedAt('asc')->orderBy('id', 'asc');
+                    $videoQuery->publiclyVisible()->with('patreonPost')->orderByEffectivePublishedAt('asc')->orderBy('id', 'asc');
                 }]);
             },
         ]);
@@ -127,6 +129,7 @@ class SetterController extends Controller
         $setter->loadMissing(['links']);
 
         $videos = Video::query()
+            ->publiclyVisible()
             ->whereHas('puzzles.setters', function ($query) use ($setter): void {
                 $query->where('setters.id', $setter->id);
             })

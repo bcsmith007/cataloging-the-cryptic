@@ -61,11 +61,13 @@ class VideosRelationManager extends RelationManager
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => match ($state) {
                         'exclusive' => 'Patron Exclusive',
+                        'private' => 'Private',
                         'public' => 'Public',
                         default => ucfirst($state ?? 'public'),
                     })
                     ->color(fn (?string $state): string => match ($state) {
                         'exclusive' => 'danger',
+                        'private' => 'warning',
                         'public' => 'success',
                         default => 'gray',
                     }),

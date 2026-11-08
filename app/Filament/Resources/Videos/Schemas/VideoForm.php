@@ -62,6 +62,7 @@ class VideoForm
                                 ->options([
                                     'public' => 'Public',
                                     'exclusive' => 'Patron Exclusive',
+                                    'private' => 'Private',
                                 ])
                                 ->default(fn ($livewire) => $livewire instanceof VideosRelationManager ? 'exclusive' : 'public')
                                 ->required()

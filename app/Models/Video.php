@@ -178,6 +178,25 @@ class Video extends Model
     }
 
     /**
+     * Determine whether the video is marked as private.
+     */
+    public function isPrivate(): bool
+    {
+        return $this->access_level === 'private';
+    }
+
+    /**
+     * Scope a query to exclude private videos from public listings and stats.
+     */
+    public function scopePubliclyVisible(Builder $query): Builder
+    {
+        return $query->where(function (Builder $q): void {
+            $q->whereNull('videos.access_level')
+                ->orWhere('videos.access_level', '!=', 'private');
+        });
+    }
+
+    /**
      * Determine whether the video is associated with a Patreon post.
      */
     public function hasPatreonPost(): bool
@@ -467,6 +486,7 @@ class Video extends Model
         $dateValue = $this->fromDateTime($effectiveDate);
 
         return static::query()
+            ->publiclyVisible()
             ->with('patreonPost')
             ->where('videos.id', '!=', $this->id)
             ->where(function (Builder $query) use ($dateValue): void {
@@ -494,6 +514,7 @@ class Video extends Model
         $dateValue = $this->fromDateTime($effectiveDate);
 
         return static::query()
+            ->publiclyVisible()
             ->with('patreonPost')
             ->where('videos.id', '!=', $this->id)
             ->where(function (Builder $query) use ($dateValue): void {

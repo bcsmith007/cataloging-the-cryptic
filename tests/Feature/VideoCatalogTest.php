@@ -1009,4 +1009,78 @@ class VideoCatalogTest extends TestCase
         $this->assertSame($exclusiveVideo->id, $middlePublicVideo->nextVideo()?->id);
         $this->assertSame($oldestPublicVideo->id, $middlePublicVideo->previousVideo()?->id);
     }
+
+    /**
+     * Test that private videos are hidden from public listings, search, stats, and return 404 on detail pages unless logged in.
+     */
+    public function test_private_videos_are_hidden_publicly_and_require_authentication_for_detail_page(): void
+    {
+        $publicVideo = Video::factory()->create([
+            'title' => 'Visible Public Solve',
+            'slug' => 'visible-public-solve',
+            'access_level' => 'public',
+            'video_type' => 'youtube',
+            'duration_seconds' => 1800,
+            'view_count' => 10000,
+            'published_at' => Carbon::parse('2026-02-01 12:00:00', 'UTC'),
+        ]);
+
+        $privateVideo = Video::factory()->create([
+            'title' => 'Hidden Private Solve',
+            'slug' => 'hidden-private-solve',
+            'access_level' => 'private',
+            'video_type' => 'youtube',
+            'duration_seconds' => 3600,
+            'view_count' => 999999,
+            'published_at' => Carbon::parse('2026-02-02 12:00:00', 'UTC'),
+        ]);
+
+        // Hidden from /videos, /, /videos/top, /videos/longest, /videos/shortest, /search, /stats
+        $this->get(route('videos.index'))
+            ->assertOk()
+            ->assertSee('Visible Public Solve')
+            ->assertDontSee('Hidden Private Solve');
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSee('Visible Public Solve')
+            ->assertDontSee('Hidden Private Solve');
+
+        $this->get(route('videos.top'))
+            ->assertOk()
+            ->assertSee('Visible Public Solve')
+            ->assertDontSee('Hidden Private Solve');
+
+        $this->get(route('videos.longest'))
+            ->assertOk()
+            ->assertSee('Visible Public Solve')
+            ->assertDontSee('Hidden Private Solve');
+
+        $this->get(route('videos.shortest'))
+            ->assertOk()
+            ->assertSee('Visible Public Solve')
+            ->assertDontSee('Hidden Private Solve');
+
+        $searchResponse = $this->get(route('search', ['q' => 'Private']))
+            ->assertOk()
+            ->assertDontSee('Hidden Private Solve');
+        $this->assertSame(0, $searchResponse->viewData('results')['total_count']);
+
+        $statsResponse = $this->get(route('stats'))->assertOk();
+        $statsResponse->assertDontSee('Hidden Private Solve');
+        $kpis = $statsResponse->viewData('kpis');
+        $this->assertSame(1, $kpis['total_videos']);
+
+        // Excluded from next/previous navigation
+        $this->assertNull($publicVideo->nextVideo());
+
+        // Detail page returns 404 for guests, 200 for authenticated users
+        $this->get(route('videos.show', $privateVideo->slug))->assertNotFound();
+
+        $user = User::factory()->create();
+        $this->actingAs($user)
+            ->get(route('videos.show', $privateVideo->slug))
+            ->assertOk()
+            ->assertSee('Hidden Private Solve');
+    }
 }

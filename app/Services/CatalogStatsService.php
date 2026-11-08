@@ -54,7 +54,7 @@ class CatalogStatsService
     public function computeHomeStats(): array
     {
         return [
-            'total_videos' => Video::count(),
+            'total_videos' => Video::publiclyVisible()->count(),
             'total_puzzles' => Puzzle::count(),
             'total_setters' => Setter::has('puzzles')->count(),
             'total_constraints' => Constraint::has('puzzles')->count(),
@@ -121,6 +121,7 @@ class CatalogStatsService
 
         // Load catalog video attributes for unified in-memory grouping and median calculations
         $allVideos = Video::query()
+            ->publiclyVisible()
             ->select(['id', 'video_type', 'access_level', 'patreon_post_id', 'duration_seconds', 'view_count', 'published_at'])
             ->get();
 
@@ -292,25 +293,34 @@ class CatalogStatsService
         }
 
         // Milestones & Hall of Fame Records
-        $mostViewedStandard = Video::where('video_type', 'youtube')
+        $mostViewedStandard = Video::query()
+            ->publiclyVisible()
+            ->where('video_type', 'youtube')
             ->orderByDesc('view_count')
             ->first(['id', 'title', 'slug', 'youtube_video_id', 'view_count', 'published_at', 'duration_seconds', 'youtube_thumbnail_url']);
 
-        $mostViewedShort = Video::where('video_type', 'youtube_short')
+        $mostViewedShort = Video::query()
+            ->publiclyVisible()
+            ->where('video_type', 'youtube_short')
             ->orderByDesc('view_count')
             ->first(['id', 'title', 'slug', 'youtube_video_id', 'view_count', 'published_at', 'duration_seconds', 'youtube_thumbnail_url']);
 
-        $longestSolve = Video::where('video_type', 'youtube')
+        $longestSolve = Video::query()
+            ->publiclyVisible()
+            ->where('video_type', 'youtube')
             ->orderByDesc('duration_seconds')
             ->first(['id', 'title', 'slug', 'youtube_video_id', 'view_count', 'published_at', 'duration_seconds', 'youtube_thumbnail_url']);
 
-        $shortestSolve = Video::where('video_type', 'youtube')
+        $shortestSolve = Video::query()
+            ->publiclyVisible()
+            ->where('video_type', 'youtube')
             ->where('duration_seconds', '>=', 60)
             ->orderBy('duration_seconds')
             ->first(['id', 'title', 'slug', 'youtube_video_id', 'view_count', 'published_at', 'duration_seconds', 'youtube_thumbnail_url']);
 
         // Month with peak uploads
         $peakUploadRow = Video::query()
+            ->publiclyVisible()
             ->selectRaw("{$monthExpr} as m_key, count(*) as count")
             ->whereNotNull('published_at')
             ->groupBy('m_key')
@@ -329,6 +339,7 @@ class CatalogStatsService
 
         // Month with peak views
         $peakViewsRow = Video::query()
+            ->publiclyVisible()
             ->selectRaw("{$monthExpr} as m_key, sum(view_count) as total_views")
             ->whereNotNull('published_at')
             ->groupBy('m_key')
@@ -354,6 +365,7 @@ class CatalogStatsService
             ->join('videos', 'video_puzzles.video_id', '=', 'videos.id')
             ->join('puzzles', 'video_puzzles.puzzle_id', '=', 'puzzles.id')
             ->join('categories', 'puzzles.category_id', '=', 'categories.id')
+            ->where('videos.access_level', '!=', 'private')
             ->select(['categories.id as category_id', 'categories.name as category_name', 'videos.id as video_id', 'videos.view_count'])
             ->get()
             ->groupBy('category_id');
@@ -397,12 +409,14 @@ class CatalogStatsService
             ->join('videos', 'video_puzzles.video_id', '=', 'videos.id')
             ->join('puzzles', 'video_puzzles.puzzle_id', '=', 'puzzles.id')
             ->join('categories', 'puzzles.category_id', '=', 'categories.id')
+            ->where('videos.access_level', '!=', 'private')
             ->selectRaw("{$yearExpr} as yr, categories.name as category_name, count(*) as count")
             ->whereNotNull('videos.published_at')
             ->groupBy('yr', 'categories.name')
             ->get();
 
         $years = Video::query()
+            ->publiclyVisible()
             ->selectRaw("{$yearExpr} as yr")
             ->whereNotNull('published_at')
             ->groupBy('yr')
@@ -429,6 +443,7 @@ class CatalogStatsService
             ->join('videos', 'video_puzzles.video_id', '=', 'videos.id')
             ->join('puzzles', 'video_puzzles.puzzle_id', '=', 'puzzles.id')
             ->join('categories', 'puzzles.category_id', '=', 'categories.id')
+            ->where('videos.access_level', '!=', 'private')
             ->selectRaw("{$monthExpr} as mo, categories.name as category_name, count(*) as count")
             ->whereNotNull('videos.published_at')
             ->groupBy('mo', 'categories.name')
@@ -769,6 +784,7 @@ class CatalogStatsService
     public function computeMusicStats(): array
     {
         $introMusicCounts = DB::table('videos')
+            ->where('access_level', '!=', 'private')
             ->whereNotNull('intro_music')
             ->where('intro_music', '!=', '')
             ->selectRaw('intro_music, count(*) as count')
@@ -778,6 +794,7 @@ class CatalogStatsService
             ->toArray();
 
         $outroMusicCounts = DB::table('videos')
+            ->where('access_level', '!=', 'private')
             ->whereNotNull('outro_music')
             ->where('outro_music', '!=', '')
             ->selectRaw('outro_music, count(*) as count')

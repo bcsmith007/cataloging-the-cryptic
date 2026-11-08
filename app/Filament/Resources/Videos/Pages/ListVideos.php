@@ -85,6 +85,8 @@ class ListVideos extends ListRecords
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('access_level', 'public')),
             'exclusive' => Tab::make('Patron Exclusive')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('access_level', 'exclusive')),
+            'private' => Tab::make('Private')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('access_level', 'private')),
             'live_stream' => Tab::make('Live Streams')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('video_type', 'live_stream')),
             'youtube_short' => Tab::make('Shorts')

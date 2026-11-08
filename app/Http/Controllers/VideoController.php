@@ -19,6 +19,7 @@ class VideoController extends Controller
     public function index(): View
     {
         $videos = Video::query()
+            ->publiclyVisible()
             ->with(['hosts', 'puzzles.category', 'patreonPost'])
             ->orderByEffectivePublishedAt('desc')
             ->orderByDesc('id')
@@ -35,6 +36,7 @@ class VideoController extends Controller
         [$currentHost, $currentHostSlug, $currentHostName] = $this->resolveHostFilter($request);
 
         $query = Video::query()
+            ->publiclyVisible()
             ->with(['hosts', 'puzzles.category', 'patreonPost']);
 
         if ($currentHost) {
@@ -61,6 +63,7 @@ class VideoController extends Controller
         [$currentHost, $currentHostSlug, $currentHostName] = $this->resolveHostFilter($request);
 
         $query = Video::query()
+            ->publiclyVisible()
             ->with(['hosts', 'puzzles.category', 'patreonPost'])
             ->where('video_type', '!=', 'live_stream');
 
@@ -88,6 +91,7 @@ class VideoController extends Controller
         [$currentHost, $currentHostSlug, $currentHostName] = $this->resolveHostFilter($request);
 
         $query = Video::query()
+            ->publiclyVisible()
             ->with(['hosts', 'puzzles.category', 'patreonPost'])
             ->where('video_type', '!=', 'youtube_short')
             ->where('duration_seconds', '>', 0);
@@ -158,7 +162,7 @@ class VideoController extends Controller
      */
     public function random(): RedirectResponse
     {
-        $video = Video::inRandomOrder()->first();
+        $video = Video::query()->publiclyVisible()->inRandomOrder()->first();
 
         if (! $video) {
             return redirect()->route('videos.index');
@@ -183,6 +187,10 @@ class VideoController extends Controller
         ])
             ->where('slug', $slug)
             ->firstOrFail();
+
+        if ($video->isPrivate() && ! auth()->check()) {
+            abort(404);
+        }
 
         $previousVideo = $video->previousVideo();
         $nextVideo = $video->nextVideo();

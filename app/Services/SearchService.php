@@ -64,6 +64,7 @@ class SearchService
         // 1. Base Query: Videos
         // Matches title, music credits, hosts, bookmarks, or attached puzzle titles / setters / categories / constraints
         $videosQuery = Video::query()
+            ->publiclyVisible()
             ->with(['hosts', 'puzzles.category', 'puzzles.setters', 'patreonPost', 'bookmarks'])
             ->where(function ($q) use ($term) {
                 $q->whereRaw('LOWER(title) LIKE ?', [$term])
@@ -85,9 +86,10 @@ class SearchService
         // Matches label
         $bookmarksQuery = Bookmark::query()
             ->with(['video.hosts', 'video.patreonPost', 'puzzle'])
-            ->whereHas('video')
+            ->whereHas('video', fn ($q) => $q->publiclyVisible())
             ->whereRaw('LOWER(bookmarks.label) LIKE ?', [$term])
             ->join('videos', 'bookmarks.video_id', '=', 'videos.id')
+            ->where('videos.access_level', '!=', 'private')
             ->select('bookmarks.*')
             ->orderByRaw(Video::EFFECTIVE_PUBLISHED_AT_SQL.' DESC')
             ->orderBy('bookmarks.timestamp_seconds');
@@ -95,7 +97,11 @@ class SearchService
         // 3. Base Query: Puzzles
         // Matches puzzle title, rules text, setters, category, constraints
         $puzzlesQuery = Puzzle::query()
-            ->with(['setters', 'category', 'constraints', 'videos.hosts', 'links'])
+            ->with(['setters', 'category', 'constraints', 'videos' => fn ($q) => $q->publiclyVisible()->with('hosts'), 'links'])
+            ->where(function ($q) {
+                $q->whereDoesntHave('videos')
+                    ->orWhereHas('videos', fn ($vq) => $vq->publiclyVisible());
+            })
             ->where(function ($q) use ($term) {
                 $q->whereRaw('LOWER(title) LIKE ?', [$term])
                     ->orWhereRaw('LOWER(rules_raw) LIKE ?', [$term])
@@ -107,7 +113,7 @@ class SearchService
 
         // 4. Base Query: Setters
         $settersQuery = Setter::query()
-            ->with(['links', 'puzzles' => fn ($q) => $q->with('videos')->limit(4)])
+            ->with(['links', 'puzzles' => fn ($q) => $q->with(['videos' => fn ($vq) => $vq->publiclyVisible()])->limit(4)])
             ->withCount('puzzles')
             ->where(function ($q) use ($term) {
                 $q->whereRaw('LOWER(name) LIKE ?', [$term])
@@ -138,8 +144,8 @@ class SearchService
 
         // 7. Base Query: Hosts
         $hostsQuery = Host::query()
-            ->with(['videos' => fn ($q) => $q->with('patreonPost')->orderByEffectivePublishedAt('desc')->limit(4)])
-            ->withCount('videos')
+            ->with(['videos' => fn ($q) => $q->publiclyVisible()->with('patreonPost')->orderByEffectivePublishedAt('desc')->limit(4)])
+            ->withCount(['videos' => fn ($q) => $q->publiclyVisible()])
             ->whereRaw('LOWER(name) LIKE ?', [$term])
             ->orderByDesc('videos_count')
             ->orderBy('name');
