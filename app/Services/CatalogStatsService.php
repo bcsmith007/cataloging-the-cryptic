@@ -19,7 +19,7 @@ class CatalogStatsService
     /**
      * Cache key for the full analytics dashboard summary.
      */
-    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v7';
+    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v8';
 
     /**
      * Cache key for the homepage counter bar statistics.
@@ -75,6 +75,7 @@ class CatalogStatsService
         if (
             ! is_array($stats)
             || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'], $stats['hostCumulativeMonthly'])
+            || (isset($stats['hostCumulativeMonthly'][0]) && ! isset($stats['hostCumulativeMonthly'][0]['other']))
             || collect($stats['categoryStats'] ?? [])->contains('name', 'Unclassified')
         ) {
             $stats = $this->computeStats();
@@ -206,38 +207,49 @@ class CatalogStatsService
         }
 
         // -------------------------------------------------------------
-        // Cumulative Host Appearances (Simon & Mark) Over Time
+        // Cumulative Host Activity (Simon, Mark & Other Hosts) Over Time
         // -------------------------------------------------------------
-        $simonMonthlyRaw = DB::table('video_hosts')
+        $hostVideoRows = DB::table('video_hosts')
             ->join('videos', 'video_hosts.video_id', '=', 'videos.id')
             ->join('hosts', 'video_hosts.host_id', '=', 'hosts.id')
             ->where('videos.access_level', '!=', 'private')
             ->whereNotNull('videos.published_at')
-            ->where(function ($query): void {
-                $query->whereIn('hosts.slug', ['simon-anthony', 'simon'])
-                    ->orWhereRaw('LOWER(hosts.name) LIKE ?', ['%simon%']);
-            })
-            ->selectRaw("{$monthExpr} as mo, count(distinct videos.id) as count")
-            ->groupBy('mo')
-            ->pluck('count', 'mo')
-            ->all();
+            ->selectRaw("videos.id as video_id, videos.duration_seconds, {$monthExpr} as mo, hosts.slug, hosts.name")
+            ->get();
 
-        $markMonthlyRaw = DB::table('video_hosts')
-            ->join('videos', 'video_hosts.video_id', '=', 'videos.id')
-            ->join('hosts', 'video_hosts.host_id', '=', 'hosts.id')
-            ->where('videos.access_level', '!=', 'private')
-            ->whereNotNull('videos.published_at')
-            ->where(function ($query): void {
-                $query->whereIn('hosts.slug', ['mark-goodliffe', 'mark'])
-                    ->orWhereRaw('LOWER(hosts.name) LIKE ?', ['%mark%']);
-            })
-            ->selectRaw("{$monthExpr} as mo, count(distinct videos.id) as count")
-            ->groupBy('mo')
-            ->pluck('count', 'mo')
-            ->all();
+        $simonMonthlyVideos = [];
+        $markMonthlyVideos = [];
+        $otherMonthlyVideos = [];
 
-        $simonCumulative = 0;
-        $markCumulative = 0;
+        foreach ($hostVideoRows as $row) {
+            $slug = (string) $row->slug;
+            $name = strtolower((string) $row->name);
+            $mo = (string) $row->mo;
+            $vidId = (int) $row->video_id;
+            $duration = max(0, (int) $row->duration_seconds);
+
+            $isSimon = in_array($slug, ['simon', 'simon-anthony'], true) || str_contains($name, 'simon');
+            $isMark = in_array($slug, ['mark', 'mark-goodliffe'], true) || str_contains($name, 'mark');
+
+            if ($isSimon) {
+                $simonMonthlyVideos[$mo][$vidId] = $duration;
+            }
+            if ($isMark) {
+                $markMonthlyVideos[$mo][$vidId] = $duration;
+            }
+            if (! $isSimon && ! $isMark) {
+                $otherMonthlyVideos[$mo][$vidId] = $duration;
+            }
+        }
+
+        $simonCumulativeCount = 0;
+        $markCumulativeCount = 0;
+        $otherCumulativeCount = 0;
+
+        $simonCumulativeDuration = 0;
+        $markCumulativeDuration = 0;
+        $otherCumulativeDuration = 0;
+
         $hostCumulativeMonthly = [];
 
         foreach ($months as $mo) {
@@ -248,19 +260,44 @@ class CatalogStatsService
                 $label = $mo;
             }
 
-            $simonMonthCount = (int) ($simonMonthlyRaw[$mo] ?? 0);
-            $markMonthCount = (int) ($markMonthlyRaw[$mo] ?? 0);
+            $simonVids = $simonMonthlyVideos[$mo] ?? [];
+            $markVids = $markMonthlyVideos[$mo] ?? [];
+            $otherVids = $otherMonthlyVideos[$mo] ?? [];
 
-            $simonCumulative += $simonMonthCount;
-            $markCumulative += $markMonthCount;
+            $simonMonthCount = count($simonVids);
+            $markMonthCount = count($markVids);
+            $otherMonthCount = count($otherVids);
+
+            $simonMonthDuration = array_sum($simonVids);
+            $markMonthDuration = array_sum($markVids);
+            $otherMonthDuration = array_sum($otherVids);
+
+            $simonCumulativeCount += $simonMonthCount;
+            $markCumulativeCount += $markMonthCount;
+            $otherCumulativeCount += $otherMonthCount;
+
+            $simonCumulativeDuration += $simonMonthDuration;
+            $markCumulativeDuration += $markMonthDuration;
+            $otherCumulativeDuration += $otherMonthDuration;
 
             $hostCumulativeMonthly[] = [
                 'month' => (string) $mo,
                 'label' => $label,
-                'simon' => $simonCumulative,
-                'mark' => $markCumulative,
+                'simon' => $simonCumulativeCount,
+                'mark' => $markCumulativeCount,
+                'other' => $otherCumulativeCount,
                 'simon_monthly' => $simonMonthCount,
                 'mark_monthly' => $markMonthCount,
+                'other_monthly' => $otherMonthCount,
+                'simon_duration_seconds' => $simonCumulativeDuration,
+                'mark_duration_seconds' => $markCumulativeDuration,
+                'other_duration_seconds' => $otherCumulativeDuration,
+                'simon_duration_hours' => round($simonCumulativeDuration / 3600, 1),
+                'mark_duration_hours' => round($markCumulativeDuration / 3600, 1),
+                'other_duration_hours' => round($otherCumulativeDuration / 3600, 1),
+                'simon_duration_monthly_hours' => round($simonMonthDuration / 3600, 1),
+                'mark_duration_monthly_hours' => round($markMonthDuration / 3600, 1),
+                'other_duration_monthly_hours' => round($otherMonthDuration / 3600, 1),
             ];
         }
 

@@ -832,35 +832,50 @@ class CatalogStatsTest extends TestCase
     }
 
     /**
-     * Test that cumulative monthly host appearances for Simon and Mark are computed across all months
-     * since the beginning of data, and that the Release Volume monthly chart provides a 24-month bar chart window.
+     * Test that cumulative monthly host appearances and total video length for Simon, Mark, and Other Hosts
+     * are computed across all months since the beginning of data, and that the Release Volume monthly chart provides a 24-month bar chart window.
      */
     public function test_stats_page_computes_cumulative_monthly_host_appearances_and_twenty_four_month_timeline_window(): void
     {
         $simon = Host::factory()->create(['name' => 'Simon Anthony', 'slug' => 'simon-anthony']);
         $mark = Host::factory()->create(['name' => 'Mark Goodliffe', 'slug' => 'mark-goodliffe']);
+        $guest = Host::factory()->create(['name' => 'Jonathan Blow', 'slug' => 'jonathan-blow']);
 
-        // Month 1 (2022-01, > 36 months ago to also verify all-time monthly history): 2 Simon videos, 1 Mark video
+        // Month 1 (2022-01, > 36 months ago to also verify all-time monthly history):
+        // Video 1: Simon solo (1800s = 0.5 hr)
         $v1 = Video::factory()->create([
             'title' => 'Simon Jan 2022 #1',
             'published_at' => Carbon::parse('2022-01-05 12:00:00'),
+            'duration_seconds' => 1800,
             'view_count' => 10000,
         ]);
         $v1->hosts()->attach($simon->id);
 
+        // Video 2: Simon & Mark co-solve (3600s = 1.0 hr)
         $v2 = Video::factory()->create([
             'title' => 'Simon & Mark Jan 2022 #2',
             'published_at' => Carbon::parse('2022-01-20 12:00:00'),
+            'duration_seconds' => 3600,
             'view_count' => 20000,
         ]);
         $v2->hosts()->attach([$simon->id, $mark->id]);
 
+        // Video 3: Guest host video (Jonathan Blow) (5400s = 1.5 hr)
+        $vGuest = Video::factory()->create([
+            'title' => 'Guest Solve Jan 2022',
+            'published_at' => Carbon::parse('2022-01-25 12:00:00'),
+            'duration_seconds' => 5400,
+            'view_count' => 12000,
+        ]);
+        $vGuest->hosts()->attach($guest->id);
+
         // Month 2 (2022-02): No uploads (gap month should preserve cumulative totals!)
 
-        // Month 3 (2022-03): 1 Mark video + 1 private Simon video (private should be excluded)
+        // Month 3 (2022-03): 1 Mark video (2400s = ~0.7 hr) + 1 private Simon video (private should be excluded)
         $v3 = Video::factory()->create([
             'title' => 'Mark Mar 2022',
             'published_at' => Carbon::parse('2022-03-10 12:00:00'),
+            'duration_seconds' => 2400,
             'view_count' => 15000,
         ]);
         $v3->hosts()->attach($mark->id);
@@ -869,6 +884,7 @@ class CatalogStatsTest extends TestCase
             'title' => 'Private Simon Video',
             'access_level' => 'private',
             'published_at' => Carbon::parse('2022-03-15 12:00:00'),
+            'duration_seconds' => 3000,
             'view_count' => 99000,
         ]);
         $privateVideo->hosts()->attach($simon->id);
@@ -881,44 +897,66 @@ class CatalogStatsTest extends TestCase
         $this->assertIsArray($hostCumulativeMonthly);
         $this->assertCount(3, $hostCumulativeMonthly);
 
-        // 2022-01: Simon = 2, Mark = 1
+        // 2022-01: Simon = 2 (1.5 hrs), Mark = 1 (1.0 hr), Other = 1 (1.5 hrs)
         $this->assertSame('2022-01', $hostCumulativeMonthly[0]['month']);
         $this->assertSame('Jan 2022', $hostCumulativeMonthly[0]['label']);
         $this->assertSame(2, $hostCumulativeMonthly[0]['simon']);
         $this->assertSame(1, $hostCumulativeMonthly[0]['mark']);
+        $this->assertSame(1, $hostCumulativeMonthly[0]['other']);
         $this->assertSame(2, $hostCumulativeMonthly[0]['simon_monthly']);
         $this->assertSame(1, $hostCumulativeMonthly[0]['mark_monthly']);
+        $this->assertSame(1, $hostCumulativeMonthly[0]['other_monthly']);
+        $this->assertSame(5400, $hostCumulativeMonthly[0]['simon_duration_seconds']);
+        $this->assertSame(3600, $hostCumulativeMonthly[0]['mark_duration_seconds']);
+        $this->assertSame(5400, $hostCumulativeMonthly[0]['other_duration_seconds']);
+        $this->assertSame(1.5, $hostCumulativeMonthly[0]['simon_duration_hours']);
+        $this->assertSame(1.0, $hostCumulativeMonthly[0]['mark_duration_hours']);
+        $this->assertSame(1.5, $hostCumulativeMonthly[0]['other_duration_hours']);
 
-        // 2022-02 (gap month): Simon stays 2, Mark stays 1
+        // 2022-02 (gap month): Simon stays 2 (1.5 hrs), Mark stays 1 (1.0 hr), Other stays 1 (1.5 hrs)
         $this->assertSame('2022-02', $hostCumulativeMonthly[1]['month']);
         $this->assertSame('Feb 2022', $hostCumulativeMonthly[1]['label']);
         $this->assertSame(2, $hostCumulativeMonthly[1]['simon']);
         $this->assertSame(1, $hostCumulativeMonthly[1]['mark']);
+        $this->assertSame(1, $hostCumulativeMonthly[1]['other']);
         $this->assertSame(0, $hostCumulativeMonthly[1]['simon_monthly']);
         $this->assertSame(0, $hostCumulativeMonthly[1]['mark_monthly']);
+        $this->assertSame(0, $hostCumulativeMonthly[1]['other_monthly']);
+        $this->assertSame(1.5, $hostCumulativeMonthly[1]['simon_duration_hours']);
+        $this->assertSame(1.0, $hostCumulativeMonthly[1]['mark_duration_hours']);
+        $this->assertSame(1.5, $hostCumulativeMonthly[1]['other_duration_hours']);
 
-        // 2022-03: Simon stays 2 (private excluded), Mark increases to 2
+        // 2022-03: Simon stays 2 (private excluded), Mark increases to 2 (1.7 hrs), Other stays 1 (1.5 hrs)
         $this->assertSame('2022-03', $hostCumulativeMonthly[2]['month']);
         $this->assertSame('Mar 2022', $hostCumulativeMonthly[2]['label']);
         $this->assertSame(2, $hostCumulativeMonthly[2]['simon']);
         $this->assertSame(2, $hostCumulativeMonthly[2]['mark']);
+        $this->assertSame(1, $hostCumulativeMonthly[2]['other']);
         $this->assertSame(0, $hostCumulativeMonthly[2]['simon_monthly']);
         $this->assertSame(1, $hostCumulativeMonthly[2]['mark_monthly']);
+        $this->assertSame(0, $hostCumulativeMonthly[2]['other_monthly']);
+        $this->assertSame(1.5, $hostCumulativeMonthly[2]['simon_duration_hours']);
+        $this->assertSame(1.7, $hostCumulativeMonthly[2]['mark_duration_hours']);
+        $this->assertSame(1.5, $hostCumulativeMonthly[2]['other_duration_hours']);
 
         // Also verify all-time monthly data includes 2022-01 through 2022-03 even though > 36 months ago
         /** @var array<int, array<string, mixed>> $monthly */
         $monthly = $response->viewData('monthly');
         $this->assertCount(3, $monthly);
         $this->assertSame('2022-01', $monthly[0]['key']);
-        $this->assertSame(2, $monthly[0]['count']);
+        $this->assertSame(3, $monthly[0]['count']);
         $this->assertSame('2022-02', $monthly[1]['key']);
         $this->assertSame(0, $monthly[1]['count']);
         $this->assertSame('2022-03', $monthly[2]['key']);
         $this->assertSame(1, $monthly[2]['count']);
 
         // Verify HTML for the cumulative host line chart and 24-month timeline window
-        $response->assertSee('Cumulative Video Appearances: Simon & Mark', false);
+        $response->assertSee('Cumulative Video Appearances: Simon, Mark & Other Hosts', false);
         $response->assertSee('id="hostCumulativeChart"', false);
+        $response->assertSee('id="btn-host-metric-count"', false);
+        $response->assertSee('id="btn-host-metric-duration"', false);
+        $response->assertSee('Other Hosts', false);
+        $response->assertSee('setHostMetric', false);
         $response->assertSee('id="timeline-monthly-nav"', false);
         $response->assertSee('id="btn-timeline-prev-month"', false);
         $response->assertSee('id="btn-timeline-next-month"', false);

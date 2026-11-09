@@ -262,32 +262,52 @@
         </div>
     </div>
 
-    {{-- Main Section 1B: Cumulative Host Appearances Over Time (Simon & Mark Line Chart) --}}
+    {{-- Main Section 1B: Cumulative Host Appearances Over Time (Simon, Mark & Other Hosts) --}}
     @php
         $latestHostMonth = !empty($hostCumulativeMonthly) ? end($hostCumulativeMonthly) : null;
         $simonTotalAppearances = (int) ($latestHostMonth['simon'] ?? 0);
+        $simonTotalHours = (float) ($latestHostMonth['simon_duration_hours'] ?? 0);
         $markTotalAppearances = (int) ($latestHostMonth['mark'] ?? 0);
+        $markTotalHours = (float) ($latestHostMonth['mark_duration_hours'] ?? 0);
+        $otherTotalAppearances = (int) ($latestHostMonth['other'] ?? 0);
+        $otherTotalHours = (float) ($latestHostMonth['other_duration_hours'] ?? 0);
     @endphp
     <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800/80 pb-4">
             <div>
                 <h2 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-                    Cumulative Video Appearances: Simon & Mark
+                    Cumulative Video Appearances: Simon, Mark & Other Hosts
                 </h2>
                 <p class="text-xs text-slate-400 mt-1">
-                    Monthly cumulative number of videos featuring Simon Anthony and Mark Goodliffe since the beginning of channel history.
+                    Monthly cumulative video releases and total video length for Simon Anthony, Mark Goodliffe, and guest/other hosts.
                 </p>
             </div>
 
-            <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('videos.index', ['host' => 'simon']) }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors font-mono flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                    Simon Anthony: {{ number_format($simonTotalAppearances) }} {{ Str::plural('video', $simonTotalAppearances) }}
-                </a>
-                <a href="{{ route('videos.index', ['host' => 'mark']) }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20 transition-colors font-mono flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
-                    Mark Goodliffe: {{ number_format($markTotalAppearances) }} {{ Str::plural('video', $markTotalAppearances) }}
-                </a>
+            <div class="flex flex-wrap items-center gap-3">
+                {{-- Metric Switcher: Video Count vs Total Video Length --}}
+                <div class="inline-flex rounded-lg bg-slate-950 p-1 border border-slate-800 text-xs font-medium">
+                    <button id="btn-host-metric-count" type="button" class="px-3 py-1.5 rounded-md transition-colors bg-sky-500/20 text-sky-400 font-semibold" onclick="setHostMetric('count')">
+                        Video Count
+                    </button>
+                    <button id="btn-host-metric-duration" type="button" class="px-3 py-1.5 rounded-md transition-colors text-slate-400 hover:text-white" onclick="setHostMetric('duration')">
+                        Total Video Length
+                    </button>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="{{ route('videos.index', ['host' => 'simon']) }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-colors font-mono flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                        Simon: {{ number_format($simonTotalAppearances) }} {{ Str::plural('video', $simonTotalAppearances) }} ({{ number_format($simonTotalHours, 1) }} hrs)
+                    </a>
+                    <a href="{{ route('videos.index', ['host' => 'mark']) }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 hover:bg-sky-500/20 transition-colors font-mono flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+                        Mark: {{ number_format($markTotalAppearances) }} {{ Str::plural('video', $markTotalAppearances) }} ({{ number_format($markTotalHours, 1) }} hrs)
+                    </a>
+                    <span class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+                        Other Hosts: {{ number_format($otherTotalAppearances) }} {{ Str::plural('video', $otherTotalAppearances) }} ({{ number_format($otherTotalHours, 1) }} hrs)
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -903,17 +923,38 @@ document.addEventListener('DOMContentLoaded', function () {
     // -------------------------------------------------------------
     // Chart 1B: Cumulative Host Appearances Line Chart (All-Time Monthly)
     // -------------------------------------------------------------
-    const hostCumulativeCanvas = document.getElementById('hostCumulativeChart');
-    if (hostCumulativeCanvas) {
+    let currentHostMetric = 'count';
+    let hostCumulativeChart = null;
+
+    function renderHostCumulativeChart() {
+        const hostCumulativeCanvas = document.getElementById('hostCumulativeChart');
+        if (!hostCumulativeCanvas) return;
+
+        if (hostCumulativeChart) {
+            hostCumulativeChart.destroy();
+        }
+
+        const isDuration = (currentHostMetric === 'duration');
+
+        const simonData = isDuration
+            ? hostCumulativeData.map(d => d.simon_duration_hours ?? 0)
+            : hostCumulativeData.map(d => d.simon ?? 0);
+        const markData = isDuration
+            ? hostCumulativeData.map(d => d.mark_duration_hours ?? 0)
+            : hostCumulativeData.map(d => d.mark ?? 0);
+        const otherData = isDuration
+            ? hostCumulativeData.map(d => d.other_duration_hours ?? 0)
+            : hostCumulativeData.map(d => d.other ?? 0);
+
         const hostCumulativeCtx = hostCumulativeCanvas.getContext('2d');
-        new Chart(hostCumulativeCtx, {
+        hostCumulativeChart = new Chart(hostCumulativeCtx, {
             type: 'line',
             data: {
                 labels: hostCumulativeData.map(d => d.label),
                 datasets: [
                     {
                         label: 'Simon Anthony',
-                        data: hostCumulativeData.map(d => d.simon),
+                        data: simonData,
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.12)',
                         borderWidth: 2.5,
@@ -925,13 +966,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     },
                     {
                         label: 'Mark Goodliffe',
-                        data: hostCumulativeData.map(d => d.mark),
+                        data: markData,
                         borderColor: '#0ea5e9',
                         backgroundColor: 'rgba(14, 165, 233, 0.12)',
                         borderWidth: 2.5,
                         tension: 0.25,
                         fill: false,
                         pointBackgroundColor: '#0ea5e9',
+                        pointRadius: 2,
+                        pointHoverRadius: 5,
+                    },
+                    {
+                        label: 'Other Hosts',
+                        data: otherData,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                        borderWidth: 2.5,
+                        tension: 0.25,
+                        fill: false,
+                        pointBackgroundColor: '#f59e0b',
                         pointRadius: 2,
                         pointHoverRadius: 5,
                     }
@@ -965,11 +1018,23 @@ document.addEventListener('DOMContentLoaded', function () {
                             label: function (ctx) {
                                 const val = Number(ctx.raw) || 0;
                                 const item = hostCumulativeData[ctx.dataIndex];
-                                const monthlyDelta = item
-                                    ? (ctx.datasetIndex === 0 ? (item.simon_monthly || 0) : (item.mark_monthly || 0))
-                                    : 0;
-                                const deltaSuffix = monthlyDelta > 0 ? ` (+${monthlyDelta.toLocaleString()} this month)` : '';
-                                return ` ${ctx.dataset.label}: ${val.toLocaleString()} videos${deltaSuffix}`;
+                                if (!isDuration) {
+                                    let monthlyDelta = 0;
+                                    if (ctx.datasetIndex === 0) monthlyDelta = item ? (item.simon_monthly || 0) : 0;
+                                    else if (ctx.datasetIndex === 1) monthlyDelta = item ? (item.mark_monthly || 0) : 0;
+                                    else if (ctx.datasetIndex === 2) monthlyDelta = item ? (item.other_monthly || 0) : 0;
+
+                                    const deltaSuffix = monthlyDelta > 0 ? ` (+${monthlyDelta.toLocaleString()} this month)` : '';
+                                    return ` ${ctx.dataset.label}: ${val.toLocaleString()} videos${deltaSuffix}`;
+                                } else {
+                                    let monthlyDeltaHours = 0;
+                                    if (ctx.datasetIndex === 0) monthlyDeltaHours = item ? (item.simon_duration_monthly_hours || 0) : 0;
+                                    else if (ctx.datasetIndex === 1) monthlyDeltaHours = item ? (item.mark_duration_monthly_hours || 0) : 0;
+                                    else if (ctx.datasetIndex === 2) monthlyDeltaHours = item ? (item.other_duration_monthly_hours || 0) : 0;
+
+                                    const deltaSuffix = monthlyDeltaHours > 0 ? ` (+${monthlyDeltaHours.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hrs this month)` : '';
+                                    return ` ${ctx.dataset.label}: ${val.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} hrs${deltaSuffix}`;
+                                }
                             }
                         }
                     }
@@ -994,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         },
                         title: {
                             display: true,
-                            text: 'Cumulative Videos',
+                            text: isDuration ? 'Cumulative Video Length (Hours)' : 'Cumulative Videos',
                             color: '#94a3b8',
                             font: { size: 11 }
                         },
@@ -1002,8 +1067,13 @@ document.addEventListener('DOMContentLoaded', function () {
                             color: '#94a3b8',
                             font: { size: 11 },
                             callback: function (value) {
-                                if (value >= 1000) return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-                                return value;
+                                if (!isDuration) {
+                                    if (value >= 1000) return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+                                    return value;
+                                } else {
+                                    if (value >= 1000) return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k hrs';
+                                    return value + ' hrs';
+                                }
                             }
                         }
                     }
@@ -1011,6 +1081,19 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    window.setHostMetric = function (metric) {
+        currentHostMetric = metric;
+        document.getElementById('btn-host-metric-count').className = (metric === 'count')
+            ? 'px-3 py-1.5 rounded-md transition-colors bg-sky-500/20 text-sky-400 font-semibold'
+            : 'px-3 py-1.5 rounded-md transition-colors text-slate-400 hover:text-white';
+        document.getElementById('btn-host-metric-duration').className = (metric === 'duration')
+            ? 'px-3 py-1.5 rounded-md transition-colors bg-sky-500/20 text-sky-400 font-semibold'
+            : 'px-3 py-1.5 rounded-md transition-colors text-slate-400 hover:text-white';
+        renderHostCumulativeChart();
+    };
+
+    renderHostCumulativeChart();
 
     // -------------------------------------------------------------
     // Chart 2: Format Donut Chart
