@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Video;
 use App\Models\YouTubeSyncLog;
 use App\Services\YouTubeService;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
@@ -574,5 +575,34 @@ class SyncYouTubeVideosCommandTest extends TestCase
         $video2->refresh();
         $this->assertSame(1350, $video1->view_count);
         $this->assertSame(5650, $video2->view_count);
+    }
+
+    /**
+     * Test that ctc:sync-youtube is scheduled at 5 minutes past each half-hour (5,35 * * * *)
+     * and that midnight/noon UTC tiered view updates still trigger at 00:05 and 12:05.
+     */
+    public function test_youtube_sync_is_scheduled_five_minutes_past_the_half_hour(): void
+    {
+        $schedule = app(Schedule::class);
+        $syncEvent = collect($schedule->events())
+            ->first(fn ($event): bool => str_contains((string) $event->command, 'ctc:sync-youtube'));
+
+        $this->assertNotNull($syncEvent);
+        $this->assertSame('5,35 * * * *', $syncEvent->expression);
+        $this->assertTrue($syncEvent->withoutOverlapping);
+
+        $service = app(YouTubeService::class);
+
+        // Tier 2 video (4 days old): due at 00:05 and 12:05 UTC, skipped at 00:35 and 12:35 UTC
+        $tier2Video = Video::factory()->create([
+            'youtube_video_id' => 'tier2_05_test',
+            'published_at' => Carbon::parse('2026-10-11 12:00:00', 'UTC'),
+            'stats_synced_at' => null,
+        ]);
+
+        $this->assertTrue($service->isVideoDueForViewUpdate($tier2Video, Carbon::parse('2026-10-15 00:05:00', 'UTC')));
+        $this->assertTrue($service->isVideoDueForViewUpdate($tier2Video, Carbon::parse('2026-10-15 12:05:00', 'UTC')));
+        $this->assertFalse($service->isVideoDueForViewUpdate($tier2Video, Carbon::parse('2026-10-15 00:35:00', 'UTC')));
+        $this->assertFalse($service->isVideoDueForViewUpdate($tier2Video, Carbon::parse('2026-10-15 12:35:00', 'UTC')));
     }
 }

@@ -230,6 +230,7 @@ class AdminPanelTest extends TestCase
         $response->assertSee('ctc:update-views');
         $response->assertDontSee('ctc:import-sheet');
         $response->assertSee('Every 30 Minutes');
+        $response->assertSee('5,35 * * * *');
         $response->assertSee('Last Script Execution');
         $response->assertSee('Last 10 Videos Added to Catalog');
         $response->assertSee('10,000');

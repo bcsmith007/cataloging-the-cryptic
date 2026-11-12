@@ -397,7 +397,7 @@
                     <span>Every 30m</span>
                     <span class="ctc-badge ctc-badge-success">Active</span>
                 </div>
-                <div class="ctc-metric-subtext">ctc:sync-youtube (Every 30 Minutes)</div>
+                <div class="ctc-metric-subtext">ctc:sync-youtube (Every 30m at :05 &amp; :35)</div>
             </div>
 
             <div class="ctc-metric-box">

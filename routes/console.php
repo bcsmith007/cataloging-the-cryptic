@@ -35,4 +35,4 @@ Artisan::command('session:prune {--ip= : Delete all sessions matching a specific
 })->purpose('Prune expired database sessions or remove consumer sessions by IP or user ID');
 
 Schedule::command('session:prune')->daily();
-Schedule::command('ctc:sync-youtube')->everyThirtyMinutes()->withoutOverlapping();
+Schedule::command('ctc:sync-youtube')->cron('5,35 * * * *')->withoutOverlapping();
