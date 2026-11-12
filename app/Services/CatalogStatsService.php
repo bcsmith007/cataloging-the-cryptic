@@ -19,7 +19,7 @@ class CatalogStatsService
     /**
      * Cache key for the full analytics dashboard summary.
      */
-    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v8';
+    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v10';
 
     /**
      * Cache key for the homepage counter bar statistics.
@@ -74,7 +74,7 @@ class CatalogStatsService
 
         if (
             ! is_array($stats)
-            || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'], $stats['hostCumulativeMonthly'])
+            || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'], $stats['hostCumulativeMonthly'], $stats['puzzlesPerVideoStats']['total_videos'])
             || (isset($stats['hostCumulativeMonthly'][0]) && ! isset($stats['hostCumulativeMonthly'][0]['other']))
             || collect($stats['categoryStats'] ?? [])->contains('name', 'Unclassified')
         ) {
@@ -84,6 +84,16 @@ class CatalogStatsService
 
         $stats['categoryMonthly'] = $stats['categoryMonthly'] ?? [];
         $stats['hostCumulativeMonthly'] = $stats['hostCumulativeMonthly'] ?? [];
+        $stats['puzzlesPerVideoStats'] = $stats['puzzlesPerVideoStats'] ?? [
+            'slices' => [],
+            'total_videos' => 0,
+            'total_tagged_videos' => 0,
+            'tagged_percentage' => 0.0,
+            'untagged_videos' => 0,
+            'multi_puzzle_videos' => 0,
+            'multi_puzzle_percentage' => 0.0,
+            'max_puzzles_in_video' => 0,
+        ];
         $stats['constraintStats'] = $stats['constraintStats'] ?? [];
         $stats['totalConstraintOccurrences'] = $stats['totalConstraintOccurrences'] ?? 0;
         $stats['totalUniqueConstraints'] = $stats['totalUniqueConstraints'] ?? count($stats['constraintStats'] ?? []);
@@ -614,6 +624,7 @@ class CatalogStatsService
         $constraintStats = $this->formatConstraintStats($constraintStatsRaw, $totalConstraintOccurrences);
 
         $musicStats = $this->computeMusicStats();
+        $puzzlesPerVideoStats = $this->computePuzzlesPerVideoStats();
 
         return [
             'kpis' => [
@@ -644,6 +655,7 @@ class CatalogStatsService
             'totalUniqueConstraints' => $totalUniqueConstraints,
             'totalVariantPuzzles' => $totalVariantPuzzles,
             'musicStats' => $musicStats,
+            'puzzlesPerVideoStats' => $puzzlesPerVideoStats,
             'milestones' => [
                 'most_viewed_standard' => $this->serializeVideoRecord($mostViewedStandard),
                 'most_viewed_short' => $this->serializeVideoRecord($mostViewedShort),
@@ -1002,6 +1014,72 @@ class CatalogStatsService
             'total_intro_tagged' => $totalIntro,
             'total_outro_tagged' => $totalOutro,
             'distinct_tracks' => count($allUniqueTracks),
+        ];
+    }
+
+    /**
+     * Compute distribution of how many puzzles are tagged into each publicly visible video.
+     *
+     * Includes videos with 0 tagged puzzles so tagging progress can be tracked.
+     *
+     * @return array{
+     *     slices: array<int, array{puzzle_count: int, label: string, video_count: int, percentage: float}>,
+     *     total_videos: int,
+     *     total_tagged_videos: int,
+     *     tagged_percentage: float,
+     *     untagged_videos: int,
+     *     multi_puzzle_videos: int,
+     *     multi_puzzle_percentage: float,
+     *     max_puzzles_in_video: int
+     * }
+     */
+    public function computePuzzlesPerVideoStats(): array
+    {
+        $perVideoCounts = DB::table('videos')
+            ->leftJoin('video_puzzles', 'videos.id', '=', 'video_puzzles.video_id')
+            ->where('videos.access_level', '!=', 'private')
+            ->selectRaw('videos.id as video_id, count(distinct video_puzzles.puzzle_id) as puzzle_count')
+            ->groupBy('videos.id')
+            ->get();
+
+        $totalVideos = $perVideoCounts->count();
+        $totalTaggedVideos = $perVideoCounts->filter(fn ($row): bool => (int) $row->puzzle_count >= 1)->count();
+        $untaggedVideos = $totalVideos - $totalTaggedVideos;
+        $multiPuzzleVideos = $perVideoCounts->filter(fn ($row): bool => (int) $row->puzzle_count > 1)->count();
+        $maxPuzzlesInVideo = (int) ($perVideoCounts->max('puzzle_count') ?? 0);
+
+        $grouped = $perVideoCounts
+            ->groupBy(fn ($row): int => (int) $row->puzzle_count)
+            ->sortKeys();
+
+        $slices = [];
+        foreach ($grouped as $puzzleCount => $rows) {
+            $countInt = (int) $puzzleCount;
+            $videoCount = $rows->count();
+
+            $slices[] = [
+                'puzzle_count' => $countInt,
+                'label' => $countInt === 1 ? '1 Puzzle' : "{$countInt} Puzzles",
+                'video_count' => $videoCount,
+                'percentage' => $totalVideos > 0
+                    ? round(($videoCount / $totalVideos) * 100, 1)
+                    : 0.0,
+            ];
+        }
+
+        return [
+            'slices' => $slices,
+            'total_videos' => $totalVideos,
+            'total_tagged_videos' => $totalTaggedVideos,
+            'tagged_percentage' => $totalVideos > 0
+                ? round(($totalTaggedVideos / $totalVideos) * 100, 1)
+                : 0.0,
+            'untagged_videos' => $untaggedVideos,
+            'multi_puzzle_videos' => $multiPuzzleVideos,
+            'multi_puzzle_percentage' => $totalVideos > 0
+                ? round(($multiPuzzleVideos / $totalVideos) * 100, 1)
+                : 0.0,
+            'max_puzzles_in_video' => $maxPuzzlesInVideo,
         ];
     }
 }

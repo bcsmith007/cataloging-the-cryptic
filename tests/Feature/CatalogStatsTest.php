@@ -963,4 +963,97 @@ class CatalogStatsTest extends TestCase
         $response->assertSee('id="timeline-monthly-range-label"', false);
         $response->assertSee('TIMELINE_MONTHLY_WINDOW_SIZE = 24', false);
     }
+
+    /**
+     * Test that /stats computes and renders the Puzzles per Video pie chart breakdown,
+     * excluding untagged videos and private videos.
+     */
+    public function test_stats_page_computes_and_renders_puzzles_per_video_pie_chart(): void
+    {
+        $category = Category::factory()->create(['name' => 'Variant Sudoku', 'slug' => 'variant-sudoku']);
+
+        $p1 = Puzzle::factory()->create(['category_id' => $category->id]);
+        $p2 = Puzzle::factory()->create(['category_id' => $category->id]);
+        $p3 = Puzzle::factory()->create(['category_id' => $category->id]);
+        $p4 = Puzzle::factory()->create(['category_id' => $category->id]);
+        $p5 = Puzzle::factory()->create(['category_id' => $category->id]);
+        $p6 = Puzzle::factory()->create(['category_id' => $category->id]);
+
+        // 2 videos with 1 puzzle each
+        $single1 = Video::factory()->create(['title' => 'Single Puzzle 1', 'published_at' => now()->subDays(5)]);
+        $single1->puzzles()->attach($p1->id, ['order_in_video' => 1]);
+
+        $single2 = Video::factory()->create(['title' => 'Single Puzzle 2', 'published_at' => now()->subDays(4)]);
+        $single2->puzzles()->attach($p2->id, ['order_in_video' => 1]);
+
+        // 1 video with 2 puzzles
+        $double = Video::factory()->create(['title' => 'Double Puzzle', 'published_at' => now()->subDays(3)]);
+        $double->puzzles()->attach($p3->id, ['order_in_video' => 1]);
+        $double->puzzles()->attach($p4->id, ['order_in_video' => 2]);
+
+        // 1 video with 3 puzzles
+        $triple = Video::factory()->create(['title' => 'Triple Puzzle', 'published_at' => now()->subDays(2)]);
+        $triple->puzzles()->attach($p5->id, ['order_in_video' => 1]);
+        $triple->puzzles()->attach($p6->id, ['order_in_video' => 2]);
+        $triple->puzzles()->attach($p1->id, ['order_in_video' => 3]);
+
+        // 1 video with 0 puzzles (included to track tagging progress)
+        Video::factory()->create(['title' => 'Untagged Video', 'published_at' => now()->subDay()]);
+
+        // 1 private video with 1 puzzle (must be excluded)
+        $privateVideo = Video::factory()->create([
+            'title' => 'Private Tagged Video',
+            'access_level' => 'private',
+            'published_at' => now()->subDay(),
+        ]);
+        $privateVideo->puzzles()->attach($p2->id, ['order_in_video' => 1]);
+
+        $response = $this->get(route('stats'));
+        $response->assertStatus(200);
+
+        /** @var array<string, mixed> $puzzlesPerVideoStats */
+        $puzzlesPerVideoStats = $response->viewData('puzzlesPerVideoStats');
+        $this->assertIsArray($puzzlesPerVideoStats);
+
+        $this->assertSame(5, $puzzlesPerVideoStats['total_videos']);
+        $this->assertSame(4, $puzzlesPerVideoStats['total_tagged_videos']);
+        $this->assertSame(80.0, $puzzlesPerVideoStats['tagged_percentage']);
+        $this->assertSame(1, $puzzlesPerVideoStats['untagged_videos']);
+        $this->assertSame(2, $puzzlesPerVideoStats['multi_puzzle_videos']);
+        $this->assertSame(40.0, $puzzlesPerVideoStats['multi_puzzle_percentage']);
+        $this->assertSame(3, $puzzlesPerVideoStats['max_puzzles_in_video']);
+
+        $slices = collect($puzzlesPerVideoStats['slices']);
+        $this->assertCount(4, $slices);
+
+        $zeroPuzzles = $slices->firstWhere('puzzle_count', 0);
+        $onePuzzle = $slices->firstWhere('puzzle_count', 1);
+        $twoPuzzles = $slices->firstWhere('puzzle_count', 2);
+        $threePuzzles = $slices->firstWhere('puzzle_count', 3);
+
+        $this->assertSame('0 Puzzles', $zeroPuzzles['label']);
+        $this->assertSame(1, $zeroPuzzles['video_count']);
+        $this->assertSame(20.0, $zeroPuzzles['percentage']);
+
+        $this->assertSame('1 Puzzle', $onePuzzle['label']);
+        $this->assertSame(2, $onePuzzle['video_count']);
+        $this->assertSame(40.0, $onePuzzle['percentage']);
+
+        $this->assertSame('2 Puzzles', $twoPuzzles['label']);
+        $this->assertSame(1, $twoPuzzles['video_count']);
+        $this->assertSame(20.0, $twoPuzzles['percentage']);
+
+        $this->assertSame('3 Puzzles', $threePuzzles['label']);
+        $this->assertSame(1, $threePuzzles['video_count']);
+        $this->assertSame(20.0, $threePuzzles['percentage']);
+
+        $response->assertSee('Puzzles per Video Breakdown');
+        $response->assertSee('id="puzzlesPerVideoChart"', false);
+        $response->assertSee('4 / 5 Tagged (80%)');
+        $response->assertSee('2 Multi-Puzzle (40%)');
+        $response->assertSee('0 Puzzles');
+        $response->assertSee('1 Puzzle');
+        $response->assertSee('2 Puzzles');
+        $response->assertSee('3 Puzzles');
+    }
 }

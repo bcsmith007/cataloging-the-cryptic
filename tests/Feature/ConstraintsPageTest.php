@@ -402,4 +402,65 @@ class ConstraintsPageTest extends TestCase
         $response->assertDontSee('Standard Rule 01');
         $response->assertSee('performLiveSearch', false);
     }
+
+    /**
+     * Test that /constraints/{slug} renders Standard Definition initially and puts
+     * Extended Description and Advanced Mechanics inside a collapsed expandable panel with a More toggle.
+     */
+    public function test_constraints_show_expands_extended_description_and_advanced_mechanics_on_more_click(): void
+    {
+        $constraint = Constraint::factory()->create([
+            'name' => 'Whisper Lines',
+            'slug' => 'whisper-lines',
+            'description' => implode("\n\n", [
+                '### Standard Definition',
+                'Adjacent digits along a line must differ by at least 5.',
+                '### Extended Description',
+                'Because 5 cannot connect to any other digit on a standard 1-9 line, 5 is excluded from lines.',
+                '### Advanced Mechanics',
+                'Digits alternate between low (1-4) and high (6-9) along the entire line.',
+            ]),
+        ]);
+
+        $response = $this->get(route('constraints.show', $constraint->slug));
+        $response->assertStatus(200);
+
+        // Standard Definition is visible immediately
+        $response->assertSee('Standard Definition');
+        $response->assertSee('Adjacent digits along a line must differ by at least 5.');
+
+        // Extended Description and Advanced Mechanics are inside the initially hidden panel
+        $response->assertSee('id="constraint-extended-definition"', false);
+        $response->assertSee('class="hidden mt-4 pt-4 border-t border-slate-800/80 ctc-markdown-content', false);
+        $response->assertSee('Extended Description');
+        $response->assertSee('5 is excluded from lines.');
+        $response->assertSee('Advanced Mechanics');
+        $response->assertSee('Digits alternate between low (1-4) and high (6-9)');
+
+        // Toggle button is present and starts collapsed
+        $response->assertSee('id="constraint-definition-toggle"', false);
+        $response->assertSee('aria-expanded="false"', false);
+        $response->assertSee('>More<', false);
+
+        // A constraint without Extended Description / Advanced Mechanics does not render the toggle
+        $simple = Constraint::factory()->create([
+            'name' => 'Simple Rule',
+            'slug' => 'simple-rule',
+            'description' => 'Simple one-line definition.',
+        ]);
+
+        $simpleResponse = $this->get(route('constraints.show', $simple->slug));
+        $simpleResponse->assertStatus(200);
+        $simpleResponse->assertSee('Simple one-line definition.');
+        $simpleResponse->assertDontSee('id="constraint-definition-toggle"', false);
+        $simpleResponse->assertDontSee('id="constraint-extended-definition"', false);
+
+        // Verify bold heading syntax also splits cleanly
+        $boldConstraint = new Constraint([
+            'description' => "**Standard Definition**\nShort rule.\n\n**Extended Description**\nMore details.",
+        ]);
+        $sections = $boldConstraint->splitDescriptionSections();
+        $this->assertSame("**Standard Definition**\nShort rule.", $sections['standard']);
+        $this->assertSame("**Extended Description**\nMore details.", $sections['extended']);
+    }
 }

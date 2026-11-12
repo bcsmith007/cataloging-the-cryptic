@@ -71,4 +71,38 @@ class Constraint extends Model
     {
         return $this->belongsToMany(Puzzle::class, 'puzzle_constraints');
     }
+
+    /**
+     * Split the constraint's markdown description into standard and extended sections.
+     *
+     * @return array{standard: string, extended: ?string}
+     */
+    public function splitDescriptionSections(): array
+    {
+        $description = trim((string) ($this->description ?? ''));
+        if ($description === '') {
+            return [
+                'standard' => '',
+                'extended' => null,
+            ];
+        }
+
+        $pattern = '/^(?:#{1,6}\s*|\*\*\s*)(?:Extended\s+Description|Advanced\s+Mechanics)\b[^\r\n]*$/im';
+
+        if (preg_match($pattern, $description, $matches, PREG_OFFSET_CAPTURE) === 1) {
+            $offset = $matches[0][1];
+            $standard = trim(substr($description, 0, $offset));
+            $extended = trim(substr($description, $offset));
+
+            return [
+                'standard' => $standard,
+                'extended' => $extended !== '' ? $extended : null,
+            ];
+        }
+
+        return [
+            'standard' => $description,
+            'extended' => null,
+        ];
+    }
 }

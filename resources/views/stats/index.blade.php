@@ -476,6 +476,64 @@
         </div>
     </div>
 
+    {{-- Main Section: Puzzles per Video Breakdown (Pie Chart) --}}
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-4">
+            <div>
+                <h3 class="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                    Puzzles per Video Breakdown
+                </h3>
+                <p class="text-xs text-slate-400 mt-1">
+                    Distribution of how many puzzles have been tagged into each video, including untagged videos.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono">
+                    {{ number_format($puzzlesPerVideoStats['total_tagged_videos'] ?? 0) }} / {{ number_format($puzzlesPerVideoStats['total_videos'] ?? 0) }} Tagged ({{ $puzzlesPerVideoStats['tagged_percentage'] ?? 0 }}%)
+                </span>
+                <span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30 font-mono">
+                    {{ number_format($puzzlesPerVideoStats['multi_puzzle_videos'] ?? 0) }} Multi-Puzzle ({{ $puzzlesPerVideoStats['multi_puzzle_percentage'] ?? 0 }}%)
+                </span>
+            </div>
+        </div>
+
+        @if (!empty($puzzlesPerVideoStats['slices']))
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                {{-- Left: Pie Chart --}}
+                <div class="lg:col-span-5 flex flex-col items-center justify-center">
+                    <div class="relative w-full max-w-[320px]" style="height: 280px;">
+                        <canvas id="puzzlesPerVideoChart"></canvas>
+                    </div>
+                </div>
+
+                {{-- Right: Breakdown List --}}
+                <div class="lg:col-span-7">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[320px] overflow-y-auto pr-1">
+                        @foreach ($puzzlesPerVideoStats['slices'] as $index => $slice)
+                            <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 hover:border-slate-700 transition-colors flex items-center justify-between text-xs">
+                                <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                                    <span class="w-3 h-3 rounded-full shrink-0 puzzles-per-video-dot" data-index="{{ $index }}" data-puzzle-count="{{ $slice['puzzle_count'] }}"></span>
+                                    <span class="font-semibold text-slate-200 truncate">
+                                        {{ $slice['label'] }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-3 shrink-0 font-mono">
+                                    <span class="text-slate-400 text-[11px]">{{ number_format($slice['video_count']) }} {{ Str::plural('video', $slice['video_count']) }}</span>
+                                    <span class="text-emerald-400 font-semibold w-12 text-right">{{ $slice['percentage'] }}%</span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="p-8 text-center text-slate-400 text-xs">
+                No videos indexed yet.
+            </div>
+        @endif
+    </div>
+
     {{-- Main Section: Variant Sudoku Constraints Breakdown (Pie Chart Tile) --}}
     <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-4">
@@ -1821,6 +1879,78 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     renderCategoryChart();
+
+    // -------------------------------------------------------------
+    // Chart: Puzzles per Video Pie Chart
+    // -------------------------------------------------------------
+    const puzzlesPerVideoData = @json($puzzlesPerVideoStats['slices'] ?? []);
+    const puzzlesPerVideoColors = [
+        '#10b981', // emerald (1 puzzle)
+        '#0ea5e9', // sky (2 puzzles)
+        '#f59e0b', // amber (3 puzzles)
+        '#8b5cf6', // violet (4 puzzles)
+        '#ec4899', // pink (5 puzzles)
+        '#06b6d4', // cyan
+        '#f97316', // orange
+        '#84cc16', // lime
+    ];
+
+    const getPuzzlesPerVideoColor = (puzzleCount) => {
+        if (puzzleCount === 0) {
+            return '#64748b'; // slate (0 puzzles / untagged)
+        }
+        return puzzlesPerVideoColors[(puzzleCount - 1) % puzzlesPerVideoColors.length];
+    };
+
+    if (puzzlesPerVideoData && puzzlesPerVideoData.length > 0) {
+        document.querySelectorAll('.puzzles-per-video-dot').forEach(dot => {
+            const puzzleCount = parseInt(dot.getAttribute('data-puzzle-count'), 10) || 0;
+            dot.style.backgroundColor = getPuzzlesPerVideoColor(puzzleCount);
+        });
+
+        const puzzlesPerVideoCanvas = document.getElementById('puzzlesPerVideoChart');
+        if (puzzlesPerVideoCanvas) {
+            const puzzlesPerVideoCtx = puzzlesPerVideoCanvas.getContext('2d');
+            new Chart(puzzlesPerVideoCtx, {
+                type: 'pie',
+                data: {
+                    labels: puzzlesPerVideoData.map(item => item.label),
+                    datasets: [{
+                        data: puzzlesPerVideoData.map(item => item.video_count),
+                        backgroundColor: puzzlesPerVideoData.map(item => getPuzzlesPerVideoColor(item.puzzle_count)),
+                        borderColor: '#020617',
+                        borderWidth: 2,
+                        hoverOffset: 8,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        tooltip: {
+                            backgroundColor: '#020617',
+                            borderColor: '#1e293b',
+                            borderWidth: 1,
+                            titleColor: '#f8fafc',
+                            bodyColor: '#cbd5e1',
+                            padding: 10,
+                            callbacks: {
+                                label: function (ctx) {
+                                    const val = ctx.raw || 0;
+                                    const item = puzzlesPerVideoData[ctx.dataIndex];
+                                    const pct = item ? item.percentage : 0;
+                                    return ` ${ctx.label}: ${Number(val).toLocaleString()} ${val === 1 ? 'video' : 'videos'} (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
 
     // -------------------------------------------------------------
     // Chart: Variant Sudoku Constraints Pie Chart

@@ -16,7 +16,7 @@
     {{-- Constraint Profile & Definition Card --}}
     <div class="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8 backdrop-blur-sm shadow-xl shadow-black/20">
         <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-            <div class="space-y-3">
+            <div class="space-y-3 flex-1 min-w-0">
                 <div class="flex items-center gap-3 flex-wrap">
                         <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                             {{ $constraint->name }}
@@ -43,14 +43,43 @@
                     </div>
 
                     {{-- Definition / Rules Description --}}
+                    @php
+                        $descriptionSections = $constraint->splitDescriptionSections();
+                        $standardDefinition = $descriptionSections['standard'];
+                        $extendedDefinition = $descriptionSections['extended'];
+                    @endphp
                     <div>
                         <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 font-mono mb-1">
                             Rule Definition
                         </div>
                         @if ($constraint->description)
-                            <div class="ctc-markdown-content text-sm text-slate-300 leading-relaxed max-w-3xl">
-                                {!! Str::markdown($constraint->description, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
-                            </div>
+                            @if ($standardDefinition !== '')
+                                <div class="ctc-markdown-content text-sm text-slate-300 leading-relaxed max-w-3xl">
+                                    {!! Str::markdown($standardDefinition, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                                </div>
+                            @endif
+
+                            @if ($extendedDefinition !== null)
+                                <div
+                                    id="constraint-extended-definition"
+                                    class="hidden mt-4 pt-4 border-t border-slate-800/80 ctc-markdown-content text-sm text-slate-300 leading-relaxed max-w-3xl"
+                                >
+                                    {!! Str::markdown($extendedDefinition, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                                </div>
+
+                                <button
+                                    type="button"
+                                    id="constraint-definition-toggle"
+                                    aria-expanded="false"
+                                    aria-controls="constraint-extended-definition"
+                                    class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 border border-slate-700/80 transition-colors cursor-pointer"
+                                >
+                                    <span data-label>More</span>
+                                    <svg data-icon class="w-3.5 h-3.5 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            @endif
                         @else
                             <p class="text-sm text-slate-500 italic max-w-2xl">
                                 No formal definition provided yet for this constraint.
@@ -372,4 +401,34 @@
         </div>
     @endif
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggleBtn = document.getElementById('constraint-definition-toggle');
+        const extendedPanel = document.getElementById('constraint-extended-definition');
+
+        if (!toggleBtn || !extendedPanel) {
+            return;
+        }
+
+        const labelEl = toggleBtn.querySelector('[data-label]');
+        const iconEl = toggleBtn.querySelector('[data-icon]');
+
+        toggleBtn.addEventListener('click', function () {
+            const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+            const nextExpanded = !isExpanded;
+
+            extendedPanel.classList.toggle('hidden', !nextExpanded);
+            toggleBtn.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+
+            if (labelEl) {
+                labelEl.textContent = nextExpanded ? 'Less' : 'More';
+            }
+
+            if (iconEl) {
+                iconEl.classList.toggle('rotate-180', nextExpanded);
+            }
+        });
+    });
+</script>
 @endsection
