@@ -316,6 +316,221 @@
         </div>
     </div>
 
+    {{-- Main Section 1C: Simon Anthony vs. Mark Goodliffe Head-to-Head Comparison --}}
+    @php
+        $simonStats = $hostComparison['simon'] ?? [];
+        $markStats = $hostComparison['mark'] ?? [];
+        $coHostedVideos = (int) ($hostComparison['co_hosted_videos'] ?? 0);
+
+        $comparisonHosts = [
+            [
+                'data' => $simonStats,
+                'fallback_name' => 'Simon Anthony',
+                'filter_key' => 'simon',
+                'dot_class' => 'bg-emerald-400',
+                'border_hover' => 'hover:border-emerald-500/40',
+                'accent_text' => 'text-emerald-400',
+                'badge_classes' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20',
+            ],
+            [
+                'data' => $markStats,
+                'fallback_name' => 'Mark Goodliffe',
+                'filter_key' => 'mark',
+                'dot_class' => 'bg-sky-400',
+                'border_hover' => 'hover:border-sky-500/40',
+                'accent_text' => 'text-sky-400',
+                'badge_classes' => 'bg-sky-500/10 text-sky-400 border-sky-500/30 hover:bg-sky-500/20',
+            ],
+        ];
+    @endphp
+    <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800/80 pb-4">
+            <div>
+                <h2 class="text-xl font-bold text-white tracking-tight">
+                    Simon Anthony vs. Mark Goodliffe
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">
+                    Side-by-side comparison of catalog videos involving Simon or Mark, including puzzle types, constraints, durations, music, and viewership.
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono">
+                    {{ number_format($coHostedVideos) }} Co-Hosted {{ Str::plural('Video', $coHostedVideos) }}
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            @foreach ($comparisonHosts as $hostCard)
+                @php
+                    $h = $hostCard['data'];
+                    $hostName = $h['name'] ?? $hostCard['fallback_name'];
+                    $filterKey = $h['filter_key'] ?? $hostCard['filter_key'];
+                @endphp
+                <div class="bg-slate-950/60 border border-slate-800/90 {{ $hostCard['border_hover'] }} rounded-2xl p-5 space-y-5 transition-colors">
+                    {{-- Host Card Header --}}
+                    <div class="flex items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-3 h-3 rounded-full shrink-0 {{ $hostCard['dot_class'] }}"></span>
+                            <div class="min-w-0">
+                                <h3 class="text-base font-bold text-white truncate">{{ $hostName }}</h3>
+                                <p class="text-[11px] text-slate-400 font-mono">
+                                    {{ number_format($h['solo_video_count'] ?? 0) }} solo &bull; {{ number_format($h['co_hosted_video_count'] ?? 0) }} co-hosted
+                                </p>
+                            </div>
+                        </div>
+                        <a href="{{ route('videos.index', ['host' => $filterKey]) }}" class="px-2.5 py-1 rounded-lg text-xs font-semibold border transition-colors shrink-0 {{ $hostCard['badge_classes'] }}">
+                            View Videos &rarr;
+                        </a>
+                    </div>
+
+                    {{-- Core Metrics 2x2 Grid --}}
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800/70">
+                            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">Videos</div>
+                            <div class="text-2xl font-extrabold {{ $hostCard['accent_text'] }} mt-1 font-mono">
+                                {{ number_format($h['video_count'] ?? 0) }}
+                            </div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">
+                                {{ number_format($h['tagged_video_count'] ?? 0) }} with tagged puzzles
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800/70">
+                            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">Puzzles</div>
+                            <div class="text-2xl font-extrabold {{ $hostCard['accent_text'] }} mt-1 font-mono">
+                                {{ number_format($h['puzzle_count'] ?? 0) }}
+                            </div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">
+                                Unique puzzles solved
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800/70">
+                            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">Total Length</div>
+                            <div class="text-xl font-extrabold text-white mt-1 font-mono">
+                                {{ $h['total_duration_formatted'] ?? '0s' }}
+                            </div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">
+                                {{ number_format($h['total_hours'] ?? 0, 1) }} hours of footage
+                            </div>
+                        </div>
+
+                        <div class="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800/70">
+                            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider font-mono">Median Length</div>
+                            <div class="text-xl font-extrabold text-white mt-1 font-mono">
+                                {{ $h['median_duration_formatted'] ?? '0s' }}
+                            </div>
+                            <div class="text-[11px] text-slate-400 mt-0.5">
+                                Mean {{ $h['avg_duration_formatted'] ?? '0s' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Breakdown Rows --}}
+                    <div class="space-y-2.5 text-xs">
+                        <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/60 flex items-center justify-between gap-3">
+                            <span class="text-slate-400 font-medium shrink-0">Most Common Puzzle Type</span>
+                            @if (!empty($h['top_category']))
+                                <div class="text-right min-w-0">
+                                    <div class="font-semibold text-slate-100 truncate">{{ $h['top_category']['name'] }}</div>
+                                    <div class="text-[11px] text-slate-400 font-mono">
+                                        {{ number_format($h['top_category']['count']) }} {{ Str::plural('puzzle', $h['top_category']['count']) }} ({{ $h['top_category']['percentage'] }}%)
+                                    </div>
+                                </div>
+                            @else
+                                <span class="text-slate-500 font-mono">N/A</span>
+                            @endif
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/60 flex items-center justify-between gap-3">
+                            <span class="text-slate-400 font-medium shrink-0">Most Common Constraint</span>
+                            @if (!empty($h['top_constraint']))
+                                <div class="text-right min-w-0">
+                                    <a href="{{ $h['top_constraint']['url'] }}" class="font-semibold {{ $hostCard['accent_text'] }} hover:underline truncate block">
+                                        {{ $h['top_constraint']['name'] }}
+                                    </a>
+                                    <div class="text-[11px] text-slate-400 font-mono">
+                                        {{ number_format($h['top_constraint']['count']) }} {{ Str::plural('puzzle', $h['top_constraint']['count']) }}
+                                    </div>
+                                </div>
+                            @else
+                                <span class="text-slate-500 font-mono">N/A</span>
+                            @endif
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/60 flex items-center justify-between gap-3">
+                            <span class="text-slate-400 font-medium shrink-0">Most Common Music</span>
+                            @if (!empty($h['top_music']))
+                                <div class="text-right min-w-0">
+                                    <div class="font-semibold text-slate-100 truncate">{{ $h['top_music']['track'] }}</div>
+                                    <div class="text-[11px] text-slate-400 font-mono">
+                                        {{ number_format($h['top_music']['count']) }} {{ Str::plural('use', $h['top_music']['count']) }}
+                                        @if (!empty($h['top_intro_music']) || !empty($h['top_outro_music']))
+                                            &bull; Intro: {{ $h['top_intro_music']['track'] ?? 'N/A' }}
+                                            &bull; Outro: {{ $h['top_outro_music']['track'] ?? 'N/A' }}
+                                        @endif
+                                    </div>
+                                </div>
+                            @else
+                                <span class="text-slate-500 font-mono">N/A</span>
+                            @endif
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/60 flex items-center justify-between gap-3">
+                            <span class="text-slate-400 font-medium shrink-0">Most Featured Setter</span>
+                            @if (!empty($h['top_setter']))
+                                <div class="text-right min-w-0">
+                                    <a href="{{ $h['top_setter']['url'] }}" class="font-semibold {{ $hostCard['accent_text'] }} hover:underline truncate block">
+                                        {{ $h['top_setter']['name'] }}
+                                    </a>
+                                    <div class="text-[11px] text-slate-400 font-mono">
+                                        {{ number_format($h['top_setter']['count']) }} {{ Str::plural('puzzle', $h['top_setter']['count']) }}
+                                    </div>
+                                </div>
+                            @else
+                                <span class="text-slate-500 font-mono">N/A</span>
+                            @endif
+                        </div>
+
+                        <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/60 flex items-center justify-between gap-3">
+                            <span class="text-slate-400 font-medium shrink-0">Viewership</span>
+                            <div class="text-right min-w-0 font-mono">
+                                <div class="font-semibold text-slate-100">{{ number_format($h['total_views'] ?? 0) }} total views</div>
+                                <div class="text-[11px] text-slate-400">{{ number_format($h['median_views'] ?? 0) }} median / video</div>
+                            </div>
+                        </div>
+
+                        @if (!empty($h['longest_video']))
+                            <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/60 flex items-center justify-between gap-3">
+                                <span class="text-slate-400 font-medium shrink-0">Longest Solo Video</span>
+                                <div class="text-right min-w-0">
+                                    <a href="{{ route('videos.show', $h['longest_video']['slug']) }}" class="font-semibold text-slate-200 hover:text-white hover:underline truncate block max-w-[260px] ml-auto">
+                                        {{ $h['longest_video']['title'] }}
+                                    </a>
+                                    <div class="text-[11px] text-slate-400 font-mono">{{ $h['longest_video']['duration_formatted'] }}</div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if (!empty($h['most_viewed_video']))
+                            <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/60 flex items-center justify-between gap-3">
+                                <span class="text-slate-400 font-medium shrink-0">Most Viewed Video</span>
+                                <div class="text-right min-w-0">
+                                    <a href="{{ route('videos.show', $h['most_viewed_video']['slug']) }}" class="font-semibold text-slate-200 hover:text-white hover:underline truncate block max-w-[260px] ml-auto">
+                                        {{ $h['most_viewed_video']['title'] }}
+                                    </a>
+                                    <div class="text-[11px] text-slate-400 font-mono">{{ number_format($h['most_viewed_video']['view_count']) }} views</div>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
     {{-- Main Section 2: Format & Duration Analysis (2-column grid) --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {{-- Card 1: Format Breakdown (Standard vs Shorts vs Live vs Patreon) --}}

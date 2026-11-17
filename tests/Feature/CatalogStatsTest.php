@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Constraint;
 use App\Models\Host;
 use App\Models\Puzzle;
+use App\Models\Setter;
 use App\Models\Video;
 use App\Services\CatalogStatsService;
 use Carbon\Carbon;
@@ -1055,5 +1056,144 @@ class CatalogStatsTest extends TestCase
         $response->assertSee('1 Puzzle');
         $response->assertSee('2 Puzzles');
         $response->assertSee('3 Puzzles');
+    }
+
+    public function test_stats_page_computes_and_renders_simon_vs_mark_comparison(): void
+    {
+        $simon = Host::factory()->create(['name' => 'Simon Anthony', 'slug' => 'simon-anthony']);
+        $mark = Host::factory()->create(['name' => 'Mark Goodliffe', 'slug' => 'mark-goodliffe']);
+
+        $variantCat = Category::factory()->create(['name' => 'Variant Sudoku', 'slug' => 'variant-sudoku']);
+        $classicCat = Category::factory()->create(['name' => 'Classic Sudoku', 'slug' => 'classic-sudoku']);
+
+        $thermo = Constraint::factory()->create(['name' => 'Thermo', 'slug' => 'thermo']);
+        $arrow = Constraint::factory()->create(['name' => 'Arrow', 'slug' => 'arrow']);
+
+        $setterA = Setter::factory()->create(['name' => 'Phistomefel', 'slug' => 'phistomefel']);
+        $setterB = Setter::factory()->create(['name' => 'Sam Cappleman-Lynes', 'slug' => 'sam-cappleman-lynes']);
+
+        // Simon puzzles: 2 Variant (Thermo), 1 Classic
+        $p1 = Puzzle::factory()->create(['category_id' => $variantCat->id]);
+        $p1->constraints()->attach($thermo->id);
+        $p1->setters()->attach($setterA->id);
+
+        $p2 = Puzzle::factory()->create(['category_id' => $variantCat->id]);
+        $p2->constraints()->attach($thermo->id);
+        $p2->setters()->attach($setterA->id);
+
+        $p3 = Puzzle::factory()->create(['category_id' => $classicCat->id]);
+        $p3->constraints()->attach($arrow->id);
+
+        // Mark puzzles: 1 Classic (Arrow)
+        $p4 = Puzzle::factory()->create(['category_id' => $classicCat->id]);
+        $p4->constraints()->attach($arrow->id);
+        $p4->setters()->attach($setterB->id);
+
+        // Simon solo videos (1800s and 3600s)
+        $s1 = Video::factory()->create([
+            'title' => 'Simon Solo 1',
+            'duration_seconds' => 1800,
+            'view_count' => 10000,
+            'intro_music' => 'Mozart Sonata',
+            'outro_music' => 'Mozart Sonata',
+            'published_at' => now()->subDays(5),
+        ]);
+        $s1->hosts()->attach($simon->id);
+        $s1->puzzles()->attach($p1->id, ['order_in_video' => 1]);
+
+        $s2 = Video::factory()->create([
+            'title' => 'Simon Solo 2',
+            'duration_seconds' => 3600,
+            'view_count' => 20000,
+            'intro_music' => 'Mozart Sonata',
+            'outro_music' => 'Bach Prelude',
+            'published_at' => now()->subDays(4),
+        ]);
+        $s2->hosts()->attach($simon->id);
+        $s2->puzzles()->attach($p2->id, ['order_in_video' => 1]);
+
+        // Co-hosted video (2400s) with p3
+        $co = Video::factory()->create([
+            'title' => 'Simon & Mark Together',
+            'duration_seconds' => 2400,
+            'view_count' => 50000,
+            'intro_music' => 'Beethoven Op 13',
+            'outro_music' => 'Beethoven Op 13',
+            'published_at' => now()->subDays(3),
+        ]);
+        $co->hosts()->attach([$simon->id, $mark->id]);
+        $co->puzzles()->attach($p3->id, ['order_in_video' => 1]);
+
+        // Mark solo video (1200s) with p4
+        $m1 = Video::factory()->create([
+            'title' => 'Mark Solo 1',
+            'duration_seconds' => 1200,
+            'view_count' => 15000,
+            'intro_music' => 'Beethoven Op 13',
+            'outro_music' => 'Chopin Nocturne',
+            'published_at' => now()->subDays(2),
+        ]);
+        $m1->hosts()->attach($mark->id);
+        $m1->puzzles()->attach($p4->id, ['order_in_video' => 1]);
+
+        // Private video for Mark (must be excluded)
+        $privateMark = Video::factory()->create([
+            'title' => 'Private Mark Video',
+            'access_level' => 'private',
+            'duration_seconds' => 9000,
+            'view_count' => 999999,
+            'published_at' => now()->subDay(),
+        ]);
+        $privateMark->hosts()->attach($mark->id);
+
+        $response = $this->get(route('stats'));
+        $response->assertStatus(200);
+
+        /** @var array<string, mixed> $comparison */
+        $comparison = $response->viewData('hostComparison');
+        $this->assertIsArray($comparison);
+        $this->assertSame(1, $comparison['co_hosted_videos']);
+
+        $simonStats = $comparison['simon'];
+        $this->assertSame(3, $simonStats['video_count']);
+        $this->assertSame(2, $simonStats['solo_video_count']);
+        $this->assertSame(1, $simonStats['co_hosted_video_count']);
+        $this->assertSame(3, $simonStats['puzzle_count']);
+        $this->assertSame(7800, $simonStats['total_duration_seconds']);
+        $this->assertSame(2400, $simonStats['median_duration_seconds']);
+        $this->assertSame('Variant Sudoku', $simonStats['top_category']['name']);
+        $this->assertSame('Thermo', $simonStats['top_constraint']['name']);
+        $this->assertSame('Mozart Sonata', $simonStats['top_music']['track']);
+        $this->assertSame('Phistomefel', $simonStats['top_setter']['name']);
+        $this->assertSame(80000, $simonStats['total_views']);
+        $this->assertSame(20000, $simonStats['median_views']);
+        $this->assertSame('Simon Solo 2', $simonStats['longest_video']['title']);
+
+        $markStats = $comparison['mark'];
+        $this->assertSame(2, $markStats['video_count']);
+        $this->assertSame(1, $markStats['solo_video_count']);
+        $this->assertSame(1, $markStats['co_hosted_video_count']);
+        $this->assertSame(2, $markStats['puzzle_count']);
+        $this->assertSame(3600, $markStats['total_duration_seconds']);
+        $this->assertSame(1800, $markStats['median_duration_seconds']);
+        $this->assertSame('Classic Sudoku', $markStats['top_category']['name']);
+        $this->assertSame('Arrow', $markStats['top_constraint']['name']);
+        $this->assertSame('Beethoven Op 13', $markStats['top_music']['track']);
+        $this->assertSame('Sam Cappleman-Lynes', $markStats['top_setter']['name']);
+        $this->assertSame(65000, $markStats['total_views']);
+        $this->assertSame(32500, $markStats['median_views']);
+        $this->assertSame('Mark Solo 1', $markStats['longest_video']['title']);
+
+        $response->assertSee('Simon Anthony vs. Mark Goodliffe');
+        $response->assertSee('1 Co-Hosted Video');
+        $response->assertSee('Longest Solo Video');
+        $response->assertSee('Variant Sudoku');
+        $response->assertSee('Classic Sudoku');
+        $response->assertSee('Thermo');
+        $response->assertSee('Arrow');
+        $response->assertSee('Mozart Sonata');
+        $response->assertSee('Beethoven Op 13');
+        $response->assertSee('Phistomefel');
+        $response->assertSee('Sam Cappleman-Lynes');
     }
 }

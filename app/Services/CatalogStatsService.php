@@ -19,7 +19,7 @@ class CatalogStatsService
     /**
      * Cache key for the full analytics dashboard summary.
      */
-    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v10';
+    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v12';
 
     /**
      * Cache key for the homepage counter bar statistics.
@@ -74,7 +74,7 @@ class CatalogStatsService
 
         if (
             ! is_array($stats)
-            || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'], $stats['hostCumulativeMonthly'], $stats['puzzlesPerVideoStats']['total_videos'])
+            || ! isset($stats['categoryMonthly'], $stats['constraintStats'], $stats['observations'], $stats['musicStats'], $stats['totalUniqueConstraints'], $stats['formatStats']['patreon_exclusive'], $stats['hostCumulativeMonthly'], $stats['puzzlesPerVideoStats']['total_videos'], $stats['hostComparison']['simon'], $stats['hostComparison']['mark'])
             || (isset($stats['hostCumulativeMonthly'][0]) && ! isset($stats['hostCumulativeMonthly'][0]['other']))
             || collect($stats['categoryStats'] ?? [])->contains('name', 'Unclassified')
         ) {
@@ -84,6 +84,11 @@ class CatalogStatsService
 
         $stats['categoryMonthly'] = $stats['categoryMonthly'] ?? [];
         $stats['hostCumulativeMonthly'] = $stats['hostCumulativeMonthly'] ?? [];
+        $stats['hostComparison'] = $stats['hostComparison'] ?? [
+            'simon' => [],
+            'mark' => [],
+            'co_hosted_videos' => 0,
+        ];
         $stats['puzzlesPerVideoStats'] = $stats['puzzlesPerVideoStats'] ?? [
             'slices' => [],
             'total_videos' => 0,
@@ -625,6 +630,7 @@ class CatalogStatsService
 
         $musicStats = $this->computeMusicStats();
         $puzzlesPerVideoStats = $this->computePuzzlesPerVideoStats();
+        $hostComparison = $this->computeHostComparisonStats();
 
         return [
             'kpis' => [
@@ -644,6 +650,7 @@ class CatalogStatsService
             'yearly' => $yearly,
             'monthly' => $monthly,
             'hostCumulativeMonthly' => $hostCumulativeMonthly,
+            'hostComparison' => $hostComparison,
             'formatStats' => $formatStats,
             'durationBrackets' => $durationBrackets,
             'dayOfWeek' => $dowData,
@@ -1080,6 +1087,354 @@ class CatalogStatsService
                 ? round(($multiPuzzleVideos / $totalVideos) * 100, 1)
                 : 0.0,
             'max_puzzles_in_video' => $maxPuzzlesInVideo,
+        ];
+    }
+
+    /**
+     * Compute a head-to-head comparison of catalog videos involving Simon Anthony vs Mark Goodliffe.
+     *
+     * @return array{
+     *     simon: array<string, mixed>,
+     *     mark: array<string, mixed>,
+     *     co_hosted_videos: int
+     * }
+     */
+    public function computeHostComparisonStats(): array
+    {
+        $hosts = DB::table('hosts')->get(['id', 'name', 'slug']);
+
+        $simonHostIds = [];
+        $markHostIds = [];
+
+        foreach ($hosts as $host) {
+            $slug = (string) $host->slug;
+            $name = strtolower((string) $host->name);
+
+            if (in_array($slug, ['simon', 'simon-anthony'], true) || str_contains($name, 'simon')) {
+                $simonHostIds[] = (int) $host->id;
+            }
+            if (in_array($slug, ['mark', 'mark-goodliffe'], true) || str_contains($name, 'mark')) {
+                $markHostIds[] = (int) $host->id;
+            }
+        }
+
+        $simonProfile = $this->buildHostComparisonProfile($simonHostIds, 'Simon Anthony', 'simon');
+        $markProfile = $this->buildHostComparisonProfile($markHostIds, 'Mark Goodliffe', 'mark');
+
+        $coHostedVideos = 0;
+        if (! empty($simonHostIds) && ! empty($markHostIds)) {
+            $coHostedVideos = (int) DB::table('videos')
+                ->where('videos.access_level', '!=', 'private')
+                ->whereExists(function ($query) use ($simonHostIds): void {
+                    $query->select(DB::raw(1))
+                        ->from('video_hosts')
+                        ->whereColumn('video_hosts.video_id', 'videos.id')
+                        ->whereIn('video_hosts.host_id', $simonHostIds);
+                })
+                ->whereExists(function ($query) use ($markHostIds): void {
+                    $query->select(DB::raw(1))
+                        ->from('video_hosts')
+                        ->whereColumn('video_hosts.video_id', 'videos.id')
+                        ->whereIn('video_hosts.host_id', $markHostIds);
+                })
+                ->count();
+        }
+
+        $simonProfile['co_hosted_video_count'] = $coHostedVideos;
+        $simonProfile['solo_video_count'] = max(0, (int) $simonProfile['video_count'] - $coHostedVideos);
+
+        $markProfile['co_hosted_video_count'] = $coHostedVideos;
+        $markProfile['solo_video_count'] = max(0, (int) $markProfile['video_count'] - $coHostedVideos);
+
+        return [
+            'simon' => $simonProfile,
+            'mark' => $markProfile,
+            'co_hosted_videos' => $coHostedVideos,
+        ];
+    }
+
+    /**
+     * Build detailed comparison statistics for a single host based on their host IDs.
+     *
+     * @param  array<int, int>  $hostIds
+     * @return array<string, mixed>
+     */
+    protected function buildHostComparisonProfile(array $hostIds, string $displayName, string $filterKey): array
+    {
+        if (empty($hostIds)) {
+            return [
+                'name' => $displayName,
+                'filter_key' => $filterKey,
+                'video_count' => 0,
+                'solo_video_count' => 0,
+                'co_hosted_video_count' => 0,
+                'puzzle_count' => 0,
+                'tagged_video_count' => 0,
+                'total_duration_seconds' => 0,
+                'total_duration_formatted' => '0s',
+                'total_hours' => 0.0,
+                'median_duration_seconds' => 0,
+                'median_duration_formatted' => '0s',
+                'avg_duration_seconds' => 0,
+                'avg_duration_formatted' => '0s',
+                'total_views' => 0,
+                'median_views' => 0,
+                'top_category' => null,
+                'top_constraint' => null,
+                'top_setter' => null,
+                'top_music' => null,
+                'top_intro_music' => null,
+                'top_outro_music' => null,
+                'longest_video' => null,
+                'most_viewed_video' => null,
+            ];
+        }
+
+        $videos = Video::query()
+            ->publiclyVisible()
+            ->whereExists(function ($query) use ($hostIds): void {
+                $query->select(DB::raw(1))
+                    ->from('video_hosts')
+                    ->whereColumn('video_hosts.video_id', 'videos.id')
+                    ->whereIn('video_hosts.host_id', $hostIds);
+            })
+            ->get([
+                'id',
+                'title',
+                'slug',
+                'youtube_video_id',
+                'video_type',
+                'published_at',
+                'duration_seconds',
+                'view_count',
+                'intro_music',
+                'outro_music',
+                'youtube_thumbnail_url',
+            ]);
+
+        $videoCount = $videos->count();
+        $totalDurationSeconds = (int) $videos->sum('duration_seconds');
+        $positiveDurations = $videos->where('duration_seconds', '>', 0)
+            ->pluck('duration_seconds')
+            ->map(fn ($d): int => (int) $d)
+            ->all();
+
+        $medianDurationSeconds = (int) round($this->calculateMedian($positiveDurations));
+        $avgDurationSeconds = count($positiveDurations) > 0
+            ? (int) round(array_sum($positiveDurations) / count($positiveDurations))
+            : 0;
+
+        $totalViews = (int) $videos->sum('view_count');
+        $viewsList = $videos->pluck('view_count')->map(fn ($v): int => (int) $v)->all();
+        $medianViews = (int) round($this->calculateMedian($viewsList));
+
+        $longestSoloVideo = Video::query()
+            ->publiclyVisible()
+            ->whereExists(function ($query) use ($hostIds): void {
+                $query->select(DB::raw(1))
+                    ->from('video_hosts')
+                    ->whereColumn('video_hosts.video_id', 'videos.id')
+                    ->whereIn('video_hosts.host_id', $hostIds);
+            })
+            ->whereNotExists(function ($query) use ($hostIds): void {
+                $query->select(DB::raw(1))
+                    ->from('video_hosts')
+                    ->whereColumn('video_hosts.video_id', 'videos.id')
+                    ->whereNotIn('video_hosts.host_id', $hostIds);
+            })
+            ->orderByDesc('duration_seconds')
+            ->first([
+                'id',
+                'title',
+                'slug',
+                'youtube_video_id',
+                'video_type',
+                'published_at',
+                'duration_seconds',
+                'view_count',
+                'youtube_thumbnail_url',
+            ]);
+
+        $longestVideo = $this->serializeVideoRecord($longestSoloVideo);
+        $mostViewedVideo = $this->serializeVideoRecord($videos->sortByDesc('view_count')->first());
+
+        // Intro, outro, and combined music counts
+        $introCounts = [];
+        $outroCounts = [];
+        $combinedMusicCounts = [];
+
+        foreach ($videos as $video) {
+            $intro = trim((string) ($video->intro_music ?? ''));
+            if ($intro !== '') {
+                $introCounts[$intro] = ($introCounts[$intro] ?? 0) + 1;
+                $combinedMusicCounts[$intro] = ($combinedMusicCounts[$intro] ?? 0) + 1;
+            }
+
+            $outro = trim((string) ($video->outro_music ?? ''));
+            if ($outro !== '') {
+                $outroCounts[$outro] = ($outroCounts[$outro] ?? 0) + 1;
+                $combinedMusicCounts[$outro] = ($combinedMusicCounts[$outro] ?? 0) + 1;
+            }
+        }
+
+        $topIntroMusic = $this->extractTopMusicTrack($introCounts);
+        $topOutroMusic = $this->extractTopMusicTrack($outroCounts);
+        $topMusic = $this->extractTopMusicTrack($combinedMusicCounts);
+
+        // Puzzle count and tagged videos count
+        $puzzleSummary = DB::table('video_puzzles')
+            ->join('videos', 'video_puzzles.video_id', '=', 'videos.id')
+            ->where('videos.access_level', '!=', 'private')
+            ->whereExists(function ($query) use ($hostIds): void {
+                $query->select(DB::raw(1))
+                    ->from('video_hosts')
+                    ->whereColumn('video_hosts.video_id', 'videos.id')
+                    ->whereIn('video_hosts.host_id', $hostIds);
+            })
+            ->selectRaw('count(distinct video_puzzles.puzzle_id) as puzzle_count, count(distinct video_puzzles.video_id) as tagged_video_count')
+            ->first();
+
+        $puzzleCount = (int) ($puzzleSummary->puzzle_count ?? 0);
+        $taggedVideoCount = (int) ($puzzleSummary->tagged_video_count ?? 0);
+
+        // Most common puzzle type (category)
+        $topCategoryRow = DB::table('video_puzzles')
+            ->join('videos', 'video_puzzles.video_id', '=', 'videos.id')
+            ->join('puzzles', 'video_puzzles.puzzle_id', '=', 'puzzles.id')
+            ->join('categories', 'puzzles.category_id', '=', 'categories.id')
+            ->where('videos.access_level', '!=', 'private')
+            ->whereExists(function ($query) use ($hostIds): void {
+                $query->select(DB::raw(1))
+                    ->from('video_hosts')
+                    ->whereColumn('video_hosts.video_id', 'videos.id')
+                    ->whereIn('video_hosts.host_id', $hostIds);
+            })
+            ->selectRaw('categories.name, categories.slug, count(distinct puzzles.id) as puzzle_count')
+            ->groupBy('categories.id', 'categories.name', 'categories.slug')
+            ->orderByDesc('puzzle_count')
+            ->orderBy('categories.name')
+            ->first();
+
+        $topCategory = $topCategoryRow ? [
+            'name' => (string) $topCategoryRow->name,
+            'slug' => (string) $topCategoryRow->slug,
+            'count' => (int) $topCategoryRow->puzzle_count,
+            'percentage' => $puzzleCount > 0
+                ? round(((int) $topCategoryRow->puzzle_count / $puzzleCount) * 100, 1)
+                : 0.0,
+        ] : null;
+
+        // Most common constraint
+        $topConstraintRow = DB::table('video_puzzles')
+            ->join('videos', 'video_puzzles.video_id', '=', 'videos.id')
+            ->join('puzzles', 'video_puzzles.puzzle_id', '=', 'puzzles.id')
+            ->join('puzzle_constraints', 'puzzles.id', '=', 'puzzle_constraints.puzzle_id')
+            ->join('constraints', 'puzzle_constraints.constraint_id', '=', 'constraints.id')
+            ->where('videos.access_level', '!=', 'private')
+            ->whereExists(function ($query) use ($hostIds): void {
+                $query->select(DB::raw(1))
+                    ->from('video_hosts')
+                    ->whereColumn('video_hosts.video_id', 'videos.id')
+                    ->whereIn('video_hosts.host_id', $hostIds);
+            })
+            ->selectRaw('constraints.name, constraints.slug, count(distinct puzzles.id) as puzzle_count')
+            ->groupBy('constraints.id', 'constraints.name', 'constraints.slug')
+            ->orderByDesc('puzzle_count')
+            ->orderBy('constraints.name')
+            ->first();
+
+        $topConstraint = $topConstraintRow ? [
+            'name' => (string) $topConstraintRow->name,
+            'slug' => (string) $topConstraintRow->slug,
+            'url' => route('constraints.show', (string) $topConstraintRow->slug),
+            'count' => (int) $topConstraintRow->puzzle_count,
+            'percentage' => $puzzleCount > 0
+                ? round(((int) $topConstraintRow->puzzle_count / $puzzleCount) * 100, 1)
+                : 0.0,
+        ] : null;
+
+        // Most featured setter
+        $topSetterRow = DB::table('video_puzzles')
+            ->join('videos', 'video_puzzles.video_id', '=', 'videos.id')
+            ->join('puzzles', 'video_puzzles.puzzle_id', '=', 'puzzles.id')
+            ->join('puzzle_setters', 'puzzles.id', '=', 'puzzle_setters.puzzle_id')
+            ->join('setters', 'puzzle_setters.setter_id', '=', 'setters.id')
+            ->where('videos.access_level', '!=', 'private')
+            ->whereExists(function ($query) use ($hostIds): void {
+                $query->select(DB::raw(1))
+                    ->from('video_hosts')
+                    ->whereColumn('video_hosts.video_id', 'videos.id')
+                    ->whereIn('video_hosts.host_id', $hostIds);
+            })
+            ->selectRaw('setters.name, setters.slug, count(distinct puzzles.id) as puzzle_count')
+            ->groupBy('setters.id', 'setters.name', 'setters.slug')
+            ->orderByDesc('puzzle_count')
+            ->orderBy('setters.name')
+            ->first();
+
+        $topSetter = $topSetterRow ? [
+            'name' => (string) $topSetterRow->name,
+            'slug' => (string) $topSetterRow->slug,
+            'url' => route('setters.show', (string) $topSetterRow->slug),
+            'count' => (int) $topSetterRow->puzzle_count,
+        ] : null;
+
+        return [
+            'name' => $displayName,
+            'filter_key' => $filterKey,
+            'video_count' => $videoCount,
+            'solo_video_count' => $videoCount,
+            'co_hosted_video_count' => 0,
+            'puzzle_count' => $puzzleCount,
+            'tagged_video_count' => $taggedVideoCount,
+            'total_duration_seconds' => $totalDurationSeconds,
+            'total_duration_formatted' => $this->formatDurationSeconds($totalDurationSeconds),
+            'total_hours' => round($totalDurationSeconds / 3600, 1),
+            'median_duration_seconds' => $medianDurationSeconds,
+            'median_duration_formatted' => $this->formatDurationSeconds($medianDurationSeconds),
+            'avg_duration_seconds' => $avgDurationSeconds,
+            'avg_duration_formatted' => $this->formatDurationSeconds($avgDurationSeconds),
+            'total_views' => $totalViews,
+            'median_views' => $medianViews,
+            'top_category' => $topCategory,
+            'top_constraint' => $topConstraint,
+            'top_setter' => $topSetter,
+            'top_music' => $topMusic,
+            'top_intro_music' => $topIntroMusic,
+            'top_outro_music' => $topOutroMusic,
+            'longest_video' => $longestVideo,
+            'most_viewed_video' => $mostViewedVideo,
+        ];
+    }
+
+    /**
+     * Extract the most frequent music track from a track-to-count map.
+     *
+     * @param  array<string, int>  $counts
+     * @return array{track: string, count: int}|null
+     */
+    protected function extractTopMusicTrack(array $counts): ?array
+    {
+        if (empty($counts)) {
+            return null;
+        }
+
+        uksort($counts, function (string $a, string $b) use ($counts): int {
+            if ($counts[$a] === $counts[$b]) {
+                return strcmp($a, $b);
+            }
+
+            return $counts[$b] <=> $counts[$a];
+        });
+
+        $topTrack = array_key_first($counts);
+        if ($topTrack === null) {
+            return null;
+        }
+
+        return [
+            'track' => (string) $topTrack,
+            'count' => (int) $counts[$topTrack],
         ];
     }
 }
