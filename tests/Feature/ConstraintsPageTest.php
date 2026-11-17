@@ -310,10 +310,10 @@ class ConstraintsPageTest extends TestCase
     /**
      * Test that the constraints index table paginates at 20 items per page with working page links.
      */
-    public function test_constraints_index_paginates_at_twenty_items_per_page(): void
+    public function test_constraints_index_paginates_at_twenty_five_items_per_page_with_infinite_scroll(): void
     {
-        // Create 25 constraints with distinct names
-        for ($i = 1; $i <= 25; $i++) {
+        // Create 30 constraints with distinct names
+        for ($i = 1; $i <= 30; $i++) {
             $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
             Constraint::factory()->create([
                 'name' => "Constraint {$num}",
@@ -326,31 +326,35 @@ class ConstraintsPageTest extends TestCase
         $responsePage1 = $this->get(route('constraints.index', ['sort' => 'name', 'dir' => 'asc']));
         $responsePage1->assertStatus(200);
 
-        // Header shows total count 25
-        $responsePage1->assertSee('25');
-        $responsePage1->assertSee('Showing 1–20 of 25');
+        // Header shows total count 30
+        $responsePage1->assertSee('30');
+        $responsePage1->assertSee('Showing 1–25 of 30');
 
-        // Page 1 should contain items 01 through 20
+        // Page 1 should contain items 01 through 25
         $responsePage1->assertSee('Constraint 01');
-        $responsePage1->assertSee('Constraint 20');
-        // Page 1 should NOT contain item 21
-        $responsePage1->assertDontSee('Constraint 21');
+        $responsePage1->assertSee('Constraint 25');
+        // Page 1 should NOT contain item 26
+        $responsePage1->assertDontSee('Constraint 26');
 
-        // Verify pagination link to page 2 is present
+        // Verify infinite scroll sentinel with next page URL is present
+        $responsePage1->assertSee('id="constraints-infinite-scroll"', false);
+        $responsePage1->assertSee('data-next-page-url=', false);
         $responsePage1->assertSee('page=2');
+        $responsePage1->assertSee('IntersectionObserver', false);
 
-        // Request page 2
+        // Request page 2 (as fetched by infinite scroll)
         $responsePage2 = $this->get(route('constraints.index', ['sort' => 'name', 'dir' => 'asc', 'page' => 2]));
         $responsePage2->assertStatus(200);
 
-        // Page 2 shows range 21–25 of 25
-        $responsePage2->assertSee('Showing 21–25 of 25');
-        // Page 2 should contain items 21 through 25
-        $responsePage2->assertSee('Constraint 21');
-        $responsePage2->assertSee('Constraint 25');
+        // Page 2 shows range 26–30 of 30
+        $responsePage2->assertSee('Showing 26–30 of 30');
+        // Page 2 should contain items 26 through 30
+        $responsePage2->assertSee('Constraint 26');
+        $responsePage2->assertSee('Constraint 30');
         // Page 2 should NOT contain items from page 1
         $responsePage2->assertDontSee('Constraint 01');
-        $responsePage2->assertDontSee('Constraint 20');
+        $responsePage2->assertDontSee('Constraint 25');
+        $responsePage2->assertSee('All 30 constraints loaded');
     }
 
     /**

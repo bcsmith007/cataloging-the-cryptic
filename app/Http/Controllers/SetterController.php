@@ -76,9 +76,9 @@ class SetterController extends Controller
                 ->orderBy('setters.id', 'asc'),
         };
 
-        $setters = $query->paginate(20)->withQueryString();
+        $setters = $query->paginate(25)->withQueryString();
         if ($setters->isEmpty() && $setters->total() > 0) {
-            $setters = $query->paginate(20, ['*'], 'page', 1)->withQueryString();
+            $setters = $query->paginate(25, ['*'], 'page', 1)->withQueryString();
         }
 
         $setters->getCollection()->load([

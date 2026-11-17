@@ -247,11 +247,28 @@
         </div>
     </div>
 
-    {{-- Pagination Controls --}}
-    <div id="constraints-pagination">
-        @if ($constraints->hasPages())
-            <div class="pt-6 border-t border-slate-800 flex justify-center">
-                {{ $constraints->links() }}
+    {{-- Infinite Scroll Sentinel --}}
+    <div
+        id="constraints-infinite-scroll"
+        data-next-page-url="{{ $constraints->nextPageUrl() ?? '' }}"
+        data-total="{{ $constraints->total() }}"
+        data-first-item="{{ $constraints->firstItem() ?? 0 }}"
+        class="pt-4"
+    >
+        @if ($constraints->hasMorePages())
+            <div id="constraints-scroll-loading" class="flex items-center justify-center gap-2 py-4 text-xs text-slate-400">
+                <svg class="w-4 h-4 animate-spin text-emerald-400 hidden" id="constraints-scroll-spinner" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span id="constraints-scroll-status">Scroll to load more constraints...</span>
+                <button type="button" id="constraints-load-more-btn" class="ml-2 px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors">
+                    Load More
+                </button>
+            </div>
+        @elseif ($constraints->total() > 0)
+            <div class="text-center py-3 text-xs text-slate-500">
+                All {{ number_format($constraints->total()) }} {{ Str::plural('constraint', $constraints->total()) }} loaded
             </div>
         @endif
     </div>
@@ -263,10 +280,139 @@ document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('constraint-table-search');
     const clearButton = document.getElementById('constraint-search-clear');
     const tableBody = document.getElementById('constraints-table-body');
-    if (!searchForm || !searchInput || !tableBody) return;
+    const infiniteContainer = document.getElementById('constraints-infinite-scroll');
+    if (!searchForm || !searchInput || !tableBody || !infiniteContainer) return;
 
     let debounceTimer = null;
     let activeController = null;
+    let scrollController = null;
+    let isLoadingMore = false;
+    let observer = null;
+
+    function updateShowingSummary() {
+        const summaryEl = document.getElementById('constraints-showing-summary');
+        if (!summaryEl) return;
+
+        const total = parseInt(infiniteContainer.dataset.total || '0', 10);
+        const firstItem = parseInt(infiniteContainer.dataset.firstItem || '1', 10) || 1;
+        const loadedRows = tableBody.querySelectorAll('tr.constraint-row').length;
+
+        if (total > 0 && loadedRows > 0) {
+            const lastItem = Math.min(total, firstItem + loadedRows - 1);
+            summaryEl.innerHTML =
+                '<span>Showing ' + firstItem.toLocaleString() + '–' + lastItem.toLocaleString() + ' of ' + total.toLocaleString() + '</span>' +
+                '<span class="text-slate-600">&bull;</span>' +
+                '<span>Click column headers to sort</span>';
+        } else {
+            summaryEl.innerHTML = '<span>Click column headers to sort</span>';
+        }
+    }
+
+    function setupObserver() {
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+
+        const loadMoreBtn = document.getElementById('constraints-load-more-btn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function () {
+                loadMoreConstraints();
+            });
+        }
+
+        const nextUrl = infiniteContainer.dataset.nextPageUrl || '';
+        if (!nextUrl || !('IntersectionObserver' in window)) {
+            return;
+        }
+
+        observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    loadMoreConstraints();
+                }
+            });
+        }, {
+            rootMargin: '250px 0px'
+        });
+
+        observer.observe(infiniteContainer);
+    }
+
+    function loadMoreConstraints() {
+        const nextUrl = infiniteContainer.dataset.nextPageUrl || '';
+        if (!nextUrl || isLoadingMore) return;
+
+        isLoadingMore = true;
+        const spinner = document.getElementById('constraints-scroll-spinner');
+        const statusEl = document.getElementById('constraints-scroll-status');
+        const loadMoreBtn = document.getElementById('constraints-load-more-btn');
+        if (spinner) spinner.classList.remove('hidden');
+        if (statusEl) statusEl.textContent = 'Loading more constraints...';
+        if (loadMoreBtn) loadMoreBtn.disabled = true;
+
+        if (scrollController) {
+            scrollController.abort();
+        }
+        scrollController = new AbortController();
+
+        fetch(nextUrl, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            signal: scrollController.signal
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Failed to load more constraints');
+                }
+                return response.text();
+            })
+            .then(function (html) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const newBody = doc.getElementById('constraints-table-body');
+                if (newBody) {
+                    const newRows = newBody.querySelectorAll('tr.constraint-row');
+                    newRows.forEach(function (row) {
+                        tableBody.appendChild(row);
+                        if (window.renderMath) {
+                            row.querySelectorAll('.ctc-markdown-content').forEach(function (el) {
+                                window.renderMath(el);
+                            });
+                        }
+                    });
+                }
+
+                const nextSentinel = doc.getElementById('constraints-infinite-scroll');
+                if (nextSentinel) {
+                    infiniteContainer.dataset.nextPageUrl = nextSentinel.dataset.nextPageUrl || '';
+                    infiniteContainer.dataset.total = nextSentinel.dataset.total || infiniteContainer.dataset.total;
+                    infiniteContainer.innerHTML = nextSentinel.innerHTML;
+                } else {
+                    infiniteContainer.dataset.nextPageUrl = '';
+                    infiniteContainer.innerHTML = '';
+                }
+
+                updateShowingSummary();
+                isLoadingMore = false;
+                setupObserver();
+            })
+            .catch(function (err) {
+                isLoadingMore = false;
+                if (err && err.name === 'AbortError') {
+                    return;
+                }
+                const spinnerEl = document.getElementById('constraints-scroll-spinner');
+                const statusText = document.getElementById('constraints-scroll-status');
+                const btn = document.getElementById('constraints-load-more-btn');
+                if (spinnerEl) spinnerEl.classList.add('hidden');
+                if (statusText) statusText.textContent = 'Could not load more constraints.';
+                if (btn) btn.disabled = false;
+            });
+    }
 
     function updateClearButtonVisibility(value) {
         if (!clearButton) return;
@@ -296,6 +442,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (query !== '') {
             url.searchParams.set('q', query);
         }
+
+        if (scrollController) {
+            scrollController.abort();
+            scrollController = null;
+        }
+        isLoadingMore = false;
 
         if (activeController) {
             activeController.abort();
@@ -329,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 }
 
-                ['constraints-table-head', 'constraints-total-badge', 'constraints-showing-summary', 'constraints-pagination'].forEach(function (id) {
+                ['constraints-table-head', 'constraints-total-badge', 'constraints-showing-summary'].forEach(function (id) {
                     const currentEl = document.getElementById(id);
                     const nextEl = doc.getElementById(id);
                     if (currentEl && nextEl) {
@@ -337,6 +489,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
 
+                const nextSentinel = doc.getElementById('constraints-infinite-scroll');
+                if (nextSentinel) {
+                    infiniteContainer.dataset.nextPageUrl = nextSentinel.dataset.nextPageUrl || '';
+                    infiniteContainer.dataset.total = nextSentinel.dataset.total || '0';
+                    infiniteContainer.dataset.firstItem = nextSentinel.dataset.firstItem || '0';
+                    infiniteContainer.innerHTML = nextSentinel.innerHTML;
+                }
+
+                setupObserver();
                 window.history.replaceState(null, '', url.toString());
             })
             .catch(function (err) {
@@ -370,6 +531,8 @@ document.addEventListener('DOMContentLoaded', function () {
             searchInput.focus();
         });
     }
+
+    setupObserver();
 });
 </script>
 @endsection

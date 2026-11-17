@@ -276,11 +276,11 @@ class SetterCatalogTest extends TestCase
     }
 
     /**
-     * Test that /setters paginates at 20 items per page with working page links.
+     * Test that /setters preloads 25 items and provides infinite scroll for subsequent pages.
      */
-    public function test_setters_index_paginates_at_twenty_items_per_page(): void
+    public function test_setters_index_paginates_at_twenty_five_items_per_page_with_infinite_scroll(): void
     {
-        for ($i = 1; $i <= 25; $i++) {
+        for ($i = 1; $i <= 30; $i++) {
             $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
             Setter::factory()->create([
                 'name' => "Setter {$num}",
@@ -292,30 +292,34 @@ class SetterCatalogTest extends TestCase
         $responsePage1 = $this->get(route('setters.index', ['sort' => 'name', 'dir' => 'asc']));
         $responsePage1->assertStatus(200);
 
-        // Header shows total count 25
-        $responsePage1->assertSee('25');
-        $responsePage1->assertSee('Showing 1–20 of 25');
+        // Header shows total count 30
+        $responsePage1->assertSee('30');
+        $responsePage1->assertSee('Showing 1–25 of 30');
 
-        // Page 1 contains items 01 to 20
+        // Page 1 contains items 01 to 25
         $responsePage1->assertSee('Setter 01');
-        $responsePage1->assertSee('Setter 20');
-        // Page 1 does not contain item 21
-        $responsePage1->assertDontSee('Setter 21');
+        $responsePage1->assertSee('Setter 25');
+        // Page 1 does not contain item 26
+        $responsePage1->assertDontSee('Setter 26');
 
-        // Verify pagination link to page 2 is present
+        // Verify infinite scroll sentinel with next page URL is present
+        $responsePage1->assertSee('id="setters-infinite-scroll"', false);
+        $responsePage1->assertSee('data-next-page-url=', false);
         $responsePage1->assertSee('page=2');
+        $responsePage1->assertSee('IntersectionObserver', false);
 
-        // Request page 2
+        // Request page 2 (as fetched by infinite scroll)
         $responsePage2 = $this->get(route('setters.index', ['sort' => 'name', 'dir' => 'asc', 'page' => 2]));
         $responsePage2->assertStatus(200);
 
-        // Page 2 shows range 21–25 of 25
-        $responsePage2->assertSee('Showing 21–25 of 25');
-        // Page 2 contains items 21 to 25
-        $responsePage2->assertSee('Setter 21');
-        $responsePage2->assertSee('Setter 25');
+        // Page 2 shows range 26–30 of 30
+        $responsePage2->assertSee('Showing 26–30 of 30');
+        // Page 2 contains items 26 to 30
+        $responsePage2->assertSee('Setter 26');
+        $responsePage2->assertSee('Setter 30');
         // Page 2 does not contain items from page 1
         $responsePage2->assertDontSee('Setter 01');
-        $responsePage2->assertDontSee('Setter 20');
+        $responsePage2->assertDontSee('Setter 25');
+        $responsePage2->assertSee('All 30 setters loaded');
     }
 }

@@ -89,9 +89,9 @@ class ConstraintController extends Controller
                 ->orderBy('constraints.id', 'asc'),
         };
 
-        $constraints = $query->paginate(20)->withQueryString();
+        $constraints = $query->paginate(25)->withQueryString();
         if ($constraints->isEmpty() && $constraints->total() > 0) {
-            $constraints = $query->paginate(20, ['*'], 'page', 1)->withQueryString();
+            $constraints = $query->paginate(25, ['*'], 'page', 1)->withQueryString();
         }
 
         $constraints->getCollection()->load([
