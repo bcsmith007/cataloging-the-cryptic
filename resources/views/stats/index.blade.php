@@ -452,7 +452,7 @@
                                         {{ $h['top_constraint']['name'] }}
                                     </a>
                                     <div class="text-[11px] text-slate-400 font-mono">
-                                        {{ number_format($h['top_constraint']['count']) }} {{ Str::plural('puzzle', $h['top_constraint']['count']) }}
+                                        {{ number_format($h['top_constraint']['count']) }} variant {{ Str::plural('puzzle', $h['top_constraint']['count']) }}
                                     </div>
                                 </div>
                             @else
@@ -486,7 +486,7 @@
                                         {{ $h['top_setter']['name'] }}
                                     </a>
                                     <div class="text-[11px] text-slate-400 font-mono">
-                                        {{ number_format($h['top_setter']['count']) }} {{ Str::plural('puzzle', $h['top_setter']['count']) }}
+                                        {{ number_format($h['top_setter']['count']) }} variant {{ Str::plural('puzzle', $h['top_setter']['count']) }}
                                     </div>
                                 </div>
                             @else

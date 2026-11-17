@@ -1071,6 +1071,7 @@ class CatalogStatsTest extends TestCase
 
         $setterA = Setter::factory()->create(['name' => 'Phistomefel', 'slug' => 'phistomefel']);
         $setterB = Setter::factory()->create(['name' => 'Sam Cappleman-Lynes', 'slug' => 'sam-cappleman-lynes']);
+        $classicSetter = Setter::factory()->create(['name' => 'Classic Setter', 'slug' => 'classic-setter']);
 
         // Simon puzzles: 2 Variant (Thermo), 1 Classic
         $p1 = Puzzle::factory()->create(['category_id' => $variantCat->id]);
@@ -1083,11 +1084,16 @@ class CatalogStatsTest extends TestCase
 
         $p3 = Puzzle::factory()->create(['category_id' => $classicCat->id]);
         $p3->constraints()->attach($arrow->id);
+        $p3->setters()->attach($classicSetter->id);
 
-        // Mark puzzles: 1 Classic (Arrow)
+        // Mark puzzles: 1 Classic (Classic Setter, must not count for top_setter/top_constraint) and 1 Variant (Arrow, Sam Cappleman-Lynes)
         $p4 = Puzzle::factory()->create(['category_id' => $classicCat->id]);
-        $p4->constraints()->attach($arrow->id);
-        $p4->setters()->attach($setterB->id);
+        $p4->constraints()->attach($thermo->id);
+        $p4->setters()->attach($classicSetter->id);
+
+        $p5 = Puzzle::factory()->create(['category_id' => $variantCat->id]);
+        $p5->constraints()->attach($arrow->id);
+        $p5->setters()->attach($setterB->id);
 
         // Simon solo videos (1800s and 3600s)
         $s1 = Video::factory()->create([
@@ -1135,6 +1141,7 @@ class CatalogStatsTest extends TestCase
         ]);
         $m1->hosts()->attach($mark->id);
         $m1->puzzles()->attach($p4->id, ['order_in_video' => 1]);
+        $m1->puzzles()->attach($p5->id, ['order_in_video' => 2]);
 
         // Private video for Mark (must be excluded)
         $privateMark = Video::factory()->create([
@@ -1173,7 +1180,7 @@ class CatalogStatsTest extends TestCase
         $this->assertSame(2, $markStats['video_count']);
         $this->assertSame(1, $markStats['solo_video_count']);
         $this->assertSame(1, $markStats['co_hosted_video_count']);
-        $this->assertSame(2, $markStats['puzzle_count']);
+        $this->assertSame(3, $markStats['puzzle_count']);
         $this->assertSame(3600, $markStats['total_duration_seconds']);
         $this->assertSame(1800, $markStats['median_duration_seconds']);
         $this->assertSame('Classic Sudoku', $markStats['top_category']['name']);

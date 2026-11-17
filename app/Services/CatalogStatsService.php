@@ -19,7 +19,7 @@ class CatalogStatsService
     /**
      * Cache key for the full analytics dashboard summary.
      */
-    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v12';
+    public const DASHBOARD_CACHE_KEY = 'catalog_analytics_summary_v13';
 
     /**
      * Cache key for the homepage counter bar statistics.
@@ -1324,13 +1324,18 @@ class CatalogStatsService
                 : 0.0,
         ] : null;
 
-        // Most common constraint
+        // Most common constraint (Variant Sudoku only)
         $topConstraintRow = DB::table('video_puzzles')
             ->join('videos', 'video_puzzles.video_id', '=', 'videos.id')
             ->join('puzzles', 'video_puzzles.puzzle_id', '=', 'puzzles.id')
+            ->join('categories', 'puzzles.category_id', '=', 'categories.id')
             ->join('puzzle_constraints', 'puzzles.id', '=', 'puzzle_constraints.puzzle_id')
             ->join('constraints', 'puzzle_constraints.constraint_id', '=', 'constraints.id')
             ->where('videos.access_level', '!=', 'private')
+            ->where(function ($query): void {
+                $query->where('categories.slug', 'variant-sudoku')
+                    ->orWhere('categories.name', 'Variant Sudoku');
+            })
             ->whereExists(function ($query) use ($hostIds): void {
                 $query->select(DB::raw(1))
                     ->from('video_hosts')
@@ -1353,13 +1358,18 @@ class CatalogStatsService
                 : 0.0,
         ] : null;
 
-        // Most featured setter
+        // Most featured setter (Variant Sudoku only)
         $topSetterRow = DB::table('video_puzzles')
             ->join('videos', 'video_puzzles.video_id', '=', 'videos.id')
             ->join('puzzles', 'video_puzzles.puzzle_id', '=', 'puzzles.id')
+            ->join('categories', 'puzzles.category_id', '=', 'categories.id')
             ->join('puzzle_setters', 'puzzles.id', '=', 'puzzle_setters.puzzle_id')
             ->join('setters', 'puzzle_setters.setter_id', '=', 'setters.id')
             ->where('videos.access_level', '!=', 'private')
+            ->where(function ($query): void {
+                $query->where('categories.slug', 'variant-sudoku')
+                    ->orWhere('categories.name', 'Variant Sudoku');
+            })
             ->whereExists(function ($query) use ($hostIds): void {
                 $query->select(DB::raw(1))
                     ->from('video_hosts')
