@@ -1,6 +1,6 @@
 <footer class="ctc-public-footer border-t border-slate-800 bg-slate-950 py-12 mt-20">
     <div class="ctc-footer-inner max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-xs text-slate-500">
-        <nav class="ctc-footer-links grid grid-cols-2 sm:grid-cols-4 gap-8 w-full max-w-4xl mx-auto text-left mb-8" aria-label="Footer navigation">
+        <nav class="ctc-footer-links grid grid-cols-2 sm:grid-cols-3 gap-8 w-full max-w-3xl mx-auto text-left mb-8" aria-label="Footer navigation">
             <div class="ctc-footer-group space-y-2.5">
                 <h3 class="ctc-footer-heading text-xs font-semibold uppercase tracking-wider text-slate-300">Videos</h3>
                 <ul class="ctc-footer-list space-y-2">
@@ -29,19 +29,6 @@
                     <li><a href="{{ route('search') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Search</a></li>
                     <li><a href="{{ route('markdown.guide') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Markdown Guide</a></li>
                     <li><a href="{{ route('privacy') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
-                </ul>
-            </div>
-
-            <div class="ctc-footer-group space-y-2.5">
-                <h3 class="ctc-footer-heading text-xs font-semibold uppercase tracking-wider text-slate-300">Account</h3>
-                <ul class="ctc-footer-list space-y-2">
-                    @auth
-                        <li><a href="{{ url('/admin') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Admin Panel</a></li>
-                        <li><a href="{{ filament()->getProfileUrl() ?? url('/admin/profile') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Profile</a></li>
-                    @else
-                        <li><a href="{{ route('filament.admin.auth.login') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Login</a></li>
-                        <li><a href="{{ route('filament.admin.auth.register') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Register</a></li>
-                    @endauth
                 </ul>
             </div>
         </nav>

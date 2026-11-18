@@ -51,6 +51,34 @@
                 </svg>
                 <span>Search</span>
             </a>
+
+            @auth
+                <div class="ctc-nav-dropdown group">
+                    <a href="{{ route('filament.admin.auth.profile') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors flex items-center gap-1" aria-haspopup="true" aria-expanded="false">
+                        <span>Profile</span>
+                        <svg class="ctc-nav-caret" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </a>
+                    <div class="ctc-dropdown-menu ctc-dropdown-menu-right" role="menu" aria-label="Profile menu">
+                        @if (auth()->user()?->isAdmin())
+                            <a href="{{ url('/admin') }}" class="ctc-dropdown-item" role="menuitem">
+                                Admin Panel
+                            </a>
+                        @endif
+                        <form method="POST" action="{{ route('filament.admin.auth.logout') }}" role="none">
+                            @csrf
+                            <button type="submit" class="ctc-dropdown-item w-full text-left cursor-pointer" role="menuitem">
+                                Logout
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @else
+                <a href="{{ route('filament.admin.auth.login') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors">
+                    Login / Register
+                </a>
+            @endauth
         </nav>
 
         {{-- Mobile Hamburger Toggle Button (visible on mobile / narrower screens < 1024px) --}}
@@ -114,6 +142,26 @@
                 </svg>
                 <span>Search</span>
             </a>
+            @auth
+                <a href="{{ route('filament.admin.auth.profile') }}" class="ctc-mobile-nav-link">
+                    <span>Profile</span>
+                </a>
+                @if (auth()->user()?->isAdmin())
+                    <a href="{{ url('/admin') }}" class="ctc-mobile-nav-link">
+                        <span>Admin Panel</span>
+                    </a>
+                @endif
+                <form method="POST" action="{{ route('filament.admin.auth.logout') }}">
+                    @csrf
+                    <button type="submit" class="ctc-mobile-nav-link w-full text-left cursor-pointer">
+                        <span>Logout</span>
+                    </button>
+                </form>
+            @else
+                <a href="{{ route('filament.admin.auth.login') }}" class="ctc-mobile-nav-link">
+                    <span>Login / Register</span>
+                </a>
+            @endauth
         </nav>
     </div>
 

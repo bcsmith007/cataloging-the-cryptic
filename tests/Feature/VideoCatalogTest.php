@@ -466,36 +466,38 @@ class VideoCatalogTest extends TestCase
     }
 
     /**
-     * Test that Admin Panel and Profile links appear in the footer only when an admin is logged in,
-     * while guests see Login and no Admin Panel. Top nav contains neither.
+     * Test that Profile / Login / Register links appear in the top nav bar,
+     * with Admin Panel (for admins only) and Logout in the Profile hover dropdown.
      */
-    public function test_admin_panel_and_profile_links_in_footer_for_authenticated_admins(): void
+    public function test_profile_and_auth_links_appear_in_top_nav_bar(): void
     {
-        // 1. Guest visitor should see Login in footer, but NOT Admin Panel or Profile
+        // 1. Guest visitor sees Login / Register link to login page, no Profile or Admin Panel
         $guestResponse = $this->get('/');
         $guestResponse->assertStatus(200);
-        $guestResponse->assertSee('Login');
+        $guestResponse->assertSee('Login / Register');
         $guestResponse->assertSee(route('filament.admin.auth.login'));
         $guestResponse->assertDontSee('Admin Panel');
-        $guestResponse->assertDontSee('Profile');
+        $guestResponse->assertDontSee('Logout');
 
-        // Top nav should not contain Admin Panel or Profile
-        $guestContent = $guestResponse->getContent();
-        $this->assertStringNotContainsString('ctc-admin-link', $guestContent);
-        $this->assertStringNotContainsString('ctc-profile-link', $guestContent);
+        // 2. Authenticated non-admin sees Profile and Logout, but NOT Admin Panel
+        $member = User::factory()->create(['is_admin' => false]);
+        $memberResponse = $this->actingAs($member)->get('/');
+        $memberResponse->assertStatus(200);
+        $memberResponse->assertSee('Profile');
+        $memberResponse->assertSee(route('filament.admin.auth.profile'));
+        $memberResponse->assertSee('Logout');
+        $memberResponse->assertSee(route('filament.admin.auth.logout'));
+        $memberResponse->assertDontSee('Admin Panel');
+        $memberResponse->assertDontSee('Login / Register');
 
-        // 2. Authenticated admin should see Admin Panel and Profile in footer, and Login should be replaced by Profile
-        $admin = User::factory()->create();
+        // 3. Authenticated admin sees Profile, Admin Panel, and Logout
+        $admin = User::factory()->create(['is_admin' => true]);
         $adminResponse = $this->actingAs($admin)->get('/');
         $adminResponse->assertStatus(200);
-        $adminResponse->assertSee('Admin Panel');
         $adminResponse->assertSee('Profile');
-        $adminResponse->assertDontSee(route('filament.admin.auth.login'));
-
-        // Top nav should still not contain Admin Panel or Profile
-        $adminContent = $adminResponse->getContent();
-        $this->assertStringNotContainsString('ctc-admin-link', $adminContent);
-        $this->assertStringNotContainsString('ctc-profile-link', $adminContent);
+        $adminResponse->assertSee('Admin Panel');
+        $adminResponse->assertSee('Logout');
+        $adminResponse->assertDontSee('Login / Register');
     }
 
     /**

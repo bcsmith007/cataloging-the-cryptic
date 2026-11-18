@@ -300,6 +300,11 @@ body {
     gap: 0.125rem;
 }
 
+.ctc-dropdown-menu-right {
+    left: auto;
+    right: 0;
+}
+
 /* Invisible bridge so cursor moving down to the menu never breaks hover */
 .ctc-dropdown-menu::before {
     content: '';
