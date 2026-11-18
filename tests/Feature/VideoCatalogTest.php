@@ -144,7 +144,7 @@ class VideoCatalogTest extends TestCase
     }
 
     /**
-     * Test pagination on /videos when exceeding per-page limit.
+     * Test infinite scroll pagination on /videos when exceeding per-page limit.
      */
     public function test_videos_index_paginates_when_many_records(): void
     {
@@ -152,7 +152,41 @@ class VideoCatalogTest extends TestCase
 
         $response = $this->get('/videos');
         $response->assertStatus(200);
-        $response->assertSee('Next');
+        $response->assertSee('id="videos-infinite-scroll"', false);
+        $response->assertSee('data-next-page-url=', false);
+        $response->assertSee('page=2');
+        $response->assertSee('IntersectionObserver', false);
+
+        $page2 = $this->get('/videos?page=2');
+        $page2->assertStatus(200);
+        $page2->assertSee('All 30 videos loaded');
+    }
+
+    /**
+     * Test jumping to a specific date on /videos filters to videos on or before that date and preserves date in infinite scroll.
+     */
+    public function test_videos_index_can_jump_to_specific_date(): void
+    {
+        Video::factory()->create([
+            'title' => 'Newest Video 2025',
+            'published_at' => '2025-06-15 12:00:00',
+        ]);
+        Video::factory()->create([
+            'title' => 'Target Date Video 2023',
+            'published_at' => '2023-05-10 15:00:00',
+        ]);
+        Video::factory()->create([
+            'title' => 'Older Video 2022',
+            'published_at' => '2022-01-20 10:00:00',
+        ]);
+
+        $response = $this->get(route('videos.index', ['date' => '2023-05-10']));
+        $response->assertStatus(200);
+        $response->assertDontSee('Newest Video 2025');
+        $response->assertSee('Target Date Video 2023');
+        $response->assertSee('Older Video 2022');
+        $response->assertSee('Showing videos on or before May 10, 2023');
+        $response->assertSee('Reset to Latest');
     }
 
     /**

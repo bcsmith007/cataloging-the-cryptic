@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Host;
 use App\Models\Video;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -14,18 +15,43 @@ use Illuminate\View\View;
 class VideoController extends Controller
 {
     /**
-     * Display a listing of all videos in reverse chronological order.
+     * Display a listing of all videos in reverse chronological order, optionally jumping to a specific date.
      */
-    public function index(): View
+    public function index(Request $request): View
     {
-        $videos = Video::query()
+        $rawDate = trim((string) $request->query('date', ''));
+        $jumpDate = null;
+        $jumpCutoffUtc = null;
+
+        if ($rawDate !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $rawDate) === 1) {
+            try {
+                $timezone = $request->user()?->timezone ?: config('app.timezone', 'UTC');
+                $parsed = Carbon::createFromFormat('Y-m-d', $rawDate, $timezone);
+                if ($parsed !== false && $parsed->format('Y-m-d') === $rawDate) {
+                    $jumpDate = $rawDate;
+                    $jumpCutoffUtc = $parsed->copy()->endOfDay()->utc()->format('Y-m-d H:i:s');
+                }
+            } catch (\Throwable) {
+                $jumpDate = null;
+                $jumpCutoffUtc = null;
+            }
+        }
+
+        $query = Video::query()
             ->publiclyVisible()
-            ->with(['hosts', 'puzzles.category', 'patreonPost'])
+            ->with(['hosts', 'puzzles.category', 'patreonPost']);
+
+        if ($jumpCutoffUtc !== null) {
+            $query->whereRaw(Video::EFFECTIVE_PUBLISHED_AT_SQL.' <= ?', [$jumpCutoffUtc]);
+        }
+
+        $videos = $query
             ->orderByEffectivePublishedAt('desc')
             ->orderByDesc('id')
-            ->paginate(24);
+            ->paginate(24)
+            ->withQueryString();
 
-        return view('videos.index', compact('videos'));
+        return view('videos.index', compact('videos', 'jumpDate'));
     }
 
     /**

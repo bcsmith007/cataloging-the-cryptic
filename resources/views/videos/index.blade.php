@@ -41,17 +41,55 @@
                     </svg>
                     <span>Shortest</span>
                 </a>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                <span id="videos-total-badge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
                     {{ number_format($videos->total()) }} {{ Str::plural('Video', $videos->total()) }}
                 </span>
             </div>
         </div>
     </div>
 
+    {{-- Jump to Specific Date Controls --}}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <form id="video-jump-date-form" method="GET" action="{{ route('videos.index') }}" class="flex flex-wrap items-center gap-2.5">
+            <label for="video-jump-date" class="text-xs font-semibold text-slate-300 uppercase tracking-wider font-mono">
+                Jump to Date
+            </label>
+            <input
+                type="date"
+                id="video-jump-date"
+                name="date"
+                value="{{ $jumpDate ?? '' }}"
+                max="{{ now()->format('Y-m-d') }}"
+                class="px-3 py-1.5 bg-slate-900/80 border border-slate-800 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors font-mono"
+            />
+            <button
+                type="submit"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 transition-colors cursor-pointer"
+            >
+                Jump
+            </button>
+            <a
+                id="video-jump-date-reset"
+                href="{{ route('videos.index') }}"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-colors @if(empty($jumpDate)) hidden @endif"
+            >
+                Reset to Latest
+            </a>
+        </form>
+
+        <div id="videos-showing-summary" class="text-xs text-slate-400 font-mono">
+            @if ($jumpDate)
+                <span>Showing videos on or before {{ \Carbon\Carbon::parse($jumpDate)->format('M j, Y') }}</span>
+            @elseif ($videos->total() > 0)
+                <span>Showing 1–{{ number_format($videos->count()) }} of {{ number_format($videos->total()) }}</span>
+            @endif
+        </div>
+    </div>
+
     {{-- Videos Grid --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div id="videos-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         @forelse ($videos as $video)
-            <article class="flex flex-col justify-between rounded-xl transition-all duration-200 overflow-hidden group {{ $video->is_finalized ? 'border border-emerald-500/40 ring-1 ring-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:border-emerald-400/60 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)] bg-slate-900/70' : 'border border-slate-800 bg-slate-900/60 hover:border-slate-700 shadow-lg shadow-black/20' }}" data-finalized="{{ $video->is_finalized ? 'true' : 'false' }}">
+            <article class="video-card flex flex-col justify-between rounded-xl transition-all duration-200 overflow-hidden group {{ $video->is_finalized ? 'border border-emerald-500/40 ring-1 ring-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)] hover:border-emerald-400/60 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)] bg-slate-900/70' : 'border border-slate-800 bg-slate-900/60 hover:border-slate-700 shadow-lg shadow-black/20' }}" data-finalized="{{ $video->is_finalized ? 'true' : 'false' }}">
                 {{-- Video Thumbnail --}}
                 <div class="relative aspect-video w-full overflow-hidden bg-slate-950">
                     @if ($video->thumbnail_url)
@@ -200,11 +238,254 @@
         @endforelse
     </div>
 
-    {{-- Pagination --}}
-    @if ($videos->hasPages())
-        <div class="pt-6 border-t border-slate-800 flex justify-center">
-            {{ $videos->links() }}
-        </div>
-    @endif
+    {{-- Infinite Scroll Sentinel --}}
+    <div
+        id="videos-infinite-scroll"
+        data-next-page-url="{{ $videos->nextPageUrl() ?? '' }}"
+        data-total="{{ $videos->total() }}"
+        data-jump-date="{{ $jumpDate ?? '' }}"
+        class="pt-4"
+    >
+        @if ($videos->hasMorePages())
+            <div id="videos-scroll-loading" class="flex items-center justify-center gap-2 py-4 text-xs text-slate-400">
+                <svg class="w-4 h-4 animate-spin text-emerald-400 hidden" id="videos-scroll-spinner" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span id="videos-scroll-status">Scroll to load more videos...</span>
+                <button type="button" id="videos-load-more-btn" class="ml-2 px-3 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors">
+                    Load More
+                </button>
+            </div>
+        @elseif ($videos->total() > 0)
+            <div class="text-center py-3 text-xs text-slate-500">
+                All {{ number_format($videos->total()) }} {{ Str::plural('video', $videos->total()) }} loaded
+            </div>
+        @endif
+    </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const videosGrid = document.getElementById('videos-grid');
+    const infiniteContainer = document.getElementById('videos-infinite-scroll');
+    const jumpForm = document.getElementById('video-jump-date-form');
+    const jumpInput = document.getElementById('video-jump-date');
+    const resetLink = document.getElementById('video-jump-date-reset');
+    if (!videosGrid || !infiniteContainer) return;
+
+    let scrollController = null;
+    let jumpController = null;
+    let isLoadingMore = false;
+    let observer = null;
+
+    function updateShowingSummary() {
+        const summaryEl = document.getElementById('videos-showing-summary');
+        if (!summaryEl) return;
+
+        const jumpDate = infiniteContainer.dataset.jumpDate || '';
+        if (jumpDate !== '') {
+            return;
+        }
+
+        const total = parseInt(infiniteContainer.dataset.total || '0', 10);
+        const loaded = videosGrid.querySelectorAll('article.video-card').length;
+        if (total > 0 && loaded > 0) {
+            summaryEl.innerHTML = '<span>Showing 1–' + loaded.toLocaleString() + ' of ' + total.toLocaleString() + '</span>';
+        }
+    }
+
+    function setupObserver() {
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+
+        const loadMoreBtn = document.getElementById('videos-load-more-btn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function () {
+                loadMoreVideos();
+            });
+        }
+
+        const nextUrl = infiniteContainer.dataset.nextPageUrl || '';
+        if (!nextUrl || !('IntersectionObserver' in window)) {
+            return;
+        }
+
+        observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    loadMoreVideos();
+                }
+            });
+        }, {
+            rootMargin: '300px 0px'
+        });
+
+        observer.observe(infiniteContainer);
+    }
+
+    function loadMoreVideos() {
+        const nextUrl = infiniteContainer.dataset.nextPageUrl || '';
+        if (!nextUrl || isLoadingMore) return;
+
+        isLoadingMore = true;
+        const spinner = document.getElementById('videos-scroll-spinner');
+        const statusEl = document.getElementById('videos-scroll-status');
+        const loadMoreBtn = document.getElementById('videos-load-more-btn');
+        if (spinner) spinner.classList.remove('hidden');
+        if (statusEl) statusEl.textContent = 'Loading more videos...';
+        if (loadMoreBtn) loadMoreBtn.disabled = true;
+
+        if (scrollController) {
+            scrollController.abort();
+        }
+        scrollController = new AbortController();
+
+        fetch(nextUrl, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            signal: scrollController.signal
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Failed to load more videos');
+                }
+                return response.text();
+            })
+            .then(function (html) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const newGrid = doc.getElementById('videos-grid');
+                if (newGrid) {
+                    newGrid.querySelectorAll('article.video-card').forEach(function (card) {
+                        videosGrid.appendChild(card);
+                    });
+                }
+
+                const nextSentinel = doc.getElementById('videos-infinite-scroll');
+                if (nextSentinel) {
+                    infiniteContainer.dataset.nextPageUrl = nextSentinel.dataset.nextPageUrl || '';
+                    infiniteContainer.dataset.total = nextSentinel.dataset.total || infiniteContainer.dataset.total;
+                    infiniteContainer.dataset.jumpDate = nextSentinel.dataset.jumpDate || '';
+                    infiniteContainer.innerHTML = nextSentinel.innerHTML;
+                } else {
+                    infiniteContainer.dataset.nextPageUrl = '';
+                    infiniteContainer.innerHTML = '';
+                }
+
+                updateShowingSummary();
+                isLoadingMore = false;
+                setupObserver();
+            })
+            .catch(function (err) {
+                isLoadingMore = false;
+                if (err && err.name === 'AbortError') {
+                    return;
+                }
+                const spinnerEl = document.getElementById('videos-scroll-spinner');
+                const statusText = document.getElementById('videos-scroll-status');
+                const btn = document.getElementById('videos-load-more-btn');
+                if (spinnerEl) spinnerEl.classList.add('hidden');
+                if (statusText) statusText.textContent = 'Could not load more videos.';
+                if (btn) btn.disabled = false;
+            });
+    }
+
+    function applyJumpDate(dateValue) {
+        if (!jumpForm) return;
+        const url = new URL(jumpForm.action, window.location.origin);
+        if (dateValue && dateValue.trim() !== '') {
+            url.searchParams.set('date', dateValue.trim());
+        }
+
+        if (scrollController) {
+            scrollController.abort();
+            scrollController = null;
+        }
+        isLoadingMore = false;
+
+        if (jumpController) {
+            jumpController.abort();
+        }
+        jumpController = new AbortController();
+
+        fetch(url.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            },
+            signal: jumpController.signal
+        })
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('Failed to jump to date');
+                }
+                return response.text();
+            })
+            .then(function (html) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                const newGrid = doc.getElementById('videos-grid');
+                if (newGrid) {
+                    videosGrid.innerHTML = newGrid.innerHTML;
+                }
+
+                ['videos-total-badge', 'videos-showing-summary'].forEach(function (id) {
+                    const currentEl = document.getElementById(id);
+                    const nextEl = doc.getElementById(id);
+                    if (currentEl && nextEl) {
+                        currentEl.innerHTML = nextEl.innerHTML;
+                    }
+                });
+
+                const nextSentinel = doc.getElementById('videos-infinite-scroll');
+                if (nextSentinel) {
+                    infiniteContainer.dataset.nextPageUrl = nextSentinel.dataset.nextPageUrl || '';
+                    infiniteContainer.dataset.total = nextSentinel.dataset.total || '0';
+                    infiniteContainer.dataset.jumpDate = nextSentinel.dataset.jumpDate || '';
+                    infiniteContainer.innerHTML = nextSentinel.innerHTML;
+                }
+
+                if (resetLink) {
+                    if (dateValue && dateValue.trim() !== '') {
+                        resetLink.classList.remove('hidden');
+                    } else {
+                        resetLink.classList.add('hidden');
+                    }
+                }
+
+                setupObserver();
+                window.history.replaceState(null, '', url.toString());
+            })
+            .catch(function (err) {
+                if (err && err.name === 'AbortError') {
+                    return;
+                }
+            });
+    }
+
+    if (jumpForm && jumpInput) {
+        jumpForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            applyJumpDate(jumpInput.value);
+        });
+    }
+
+    if (resetLink && jumpInput) {
+        resetLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            jumpInput.value = '';
+            applyJumpDate('');
+        });
+    }
+
+    setupObserver();
+});
+</script>
 @endsection
