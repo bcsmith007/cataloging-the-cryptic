@@ -24,31 +24,63 @@ class SetterController extends Controller
             $direction = 'desc';
         }
         $search = trim($request->query('q', $request->query('search', '')));
+        $sudokuOnly = $request->boolean('sudoku_only');
 
         $effectiveDateSql = Video::EFFECTIVE_PUBLISHED_AT_SQL;
+
+        $applySudokuCategoryFilter = function ($categoryQuery): void {
+            $categoryQuery->whereIn('categories.slug', ['variant-sudoku', 'classic-sudoku'])
+                ->orWhereIn('categories.name', ['Variant Sudoku', 'Classic Sudoku']);
+        };
 
         $firstPublishedSubquery = DB::table('puzzle_setters')
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_setters.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_setters.setter_id', 'setters.id')
             ->where('videos.access_level', '!=', 'private')
-            ->whereRaw("{$effectiveDateSql} IS NOT NULL")
-            ->selectRaw("MIN({$effectiveDateSql})");
+            ->whereRaw("{$effectiveDateSql} IS NOT NULL");
+
+        if ($sudokuOnly) {
+            $firstPublishedSubquery
+                ->join('puzzles', 'puzzles.id', '=', 'puzzle_setters.puzzle_id')
+                ->join('categories', 'categories.id', '=', 'puzzles.category_id')
+                ->where($applySudokuCategoryFilter);
+        }
+
+        $firstPublishedSubquery->selectRaw("MIN({$effectiveDateSql})");
 
         $recentPublishedSubquery = DB::table('puzzle_setters')
             ->join('video_puzzles', 'video_puzzles.puzzle_id', '=', 'puzzle_setters.puzzle_id')
             ->join('videos', 'videos.id', '=', 'video_puzzles.video_id')
             ->whereColumn('puzzle_setters.setter_id', 'setters.id')
             ->where('videos.access_level', '!=', 'private')
-            ->whereRaw("{$effectiveDateSql} IS NOT NULL")
-            ->selectRaw("CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX({$effectiveDateSql}) ELSE NULL END");
+            ->whereRaw("{$effectiveDateSql} IS NOT NULL");
+
+        if ($sudokuOnly) {
+            $recentPublishedSubquery
+                ->join('puzzles', 'puzzles.id', '=', 'puzzle_setters.puzzle_id')
+                ->join('categories', 'categories.id', '=', 'puzzles.category_id')
+                ->where($applySudokuCategoryFilter);
+        }
+
+        $recentPublishedSubquery->selectRaw("CASE WHEN COUNT(DISTINCT videos.id) > 1 THEN MAX({$effectiveDateSql}) ELSE NULL END");
 
         $query = Setter::query()
-            ->withCount('puzzles')
+            ->withCount([
+                'puzzles' => function ($puzzleQuery) use ($sudokuOnly, $applySudokuCategoryFilter): void {
+                    if ($sudokuOnly) {
+                        $puzzleQuery->whereHas('category', $applySudokuCategoryFilter);
+                    }
+                },
+            ])
             ->addSelect([
                 'first_published_at' => $firstPublishedSubquery,
                 'recent_published_at' => $recentPublishedSubquery,
             ]);
+
+        if ($sudokuOnly) {
+            $query->whereHas('puzzles.category', $applySudokuCategoryFilter);
+        }
 
         if ($search !== '') {
             $term = '%'.mb_strtolower($search).'%';
@@ -82,7 +114,11 @@ class SetterController extends Controller
         }
 
         $setters->getCollection()->load([
-            'puzzles' => function ($puzzleQuery): void {
+            'puzzles' => function ($puzzleQuery) use ($sudokuOnly, $applySudokuCategoryFilter): void {
+                if ($sudokuOnly) {
+                    $puzzleQuery->whereHas('category', $applySudokuCategoryFilter);
+                }
+
                 $puzzleQuery->with(['videos' => function ($videoQuery): void {
                     $videoQuery->publiclyVisible()->with('patreonPost')->orderByEffectivePublishedAt('asc')->orderBy('id', 'asc');
                 }]);
@@ -118,7 +154,7 @@ class SetterController extends Controller
             return $setter;
         });
 
-        return view('setters.index', compact('setters', 'sort', 'direction', 'search'));
+        return view('setters.index', compact('setters', 'sort', 'direction', 'search', 'sudokuOnly'));
     }
 
     /**

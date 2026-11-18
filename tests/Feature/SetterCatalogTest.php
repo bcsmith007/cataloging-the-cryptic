@@ -322,4 +322,60 @@ class SetterCatalogTest extends TestCase
         $responsePage2->assertDontSee('Setter 25');
         $responsePage2->assertSee('All 30 setters loaded');
     }
+
+    /**
+     * Test that /setters can toggle to only count and display setters of Variant & Classic Sudoku puzzles.
+     */
+    public function test_setters_index_can_filter_to_variant_and_classic_sudoku_only(): void
+    {
+        $variantCat = Category::factory()->create(['name' => 'Variant Sudoku', 'slug' => 'variant-sudoku']);
+        $classicCat = Category::factory()->create(['name' => 'Classic Sudoku', 'slug' => 'classic-sudoku']);
+        $crosswordCat = Category::factory()->create(['name' => 'Cryptic Crossword', 'slug' => 'cryptic-crossword']);
+
+        $variantSetter = Setter::factory()->create(['name' => 'Variant Creator', 'slug' => 'variant-creator']);
+        $classicSetter = Setter::factory()->create(['name' => 'Classic Creator', 'slug' => 'classic-creator']);
+        $crosswordOnlySetter = Setter::factory()->create(['name' => 'Crossword Only Creator', 'slug' => 'crossword-only-creator']);
+        $mixedSetter = Setter::factory()->create(['name' => 'Mixed Creator', 'slug' => 'mixed-creator']);
+
+        $p1 = Puzzle::factory()->create(['category_id' => $variantCat->id]);
+        $p1->setters()->attach($variantSetter->id);
+
+        $p2 = Puzzle::factory()->create(['category_id' => $classicCat->id]);
+        $p2->setters()->attach($classicSetter->id);
+
+        $p3 = Puzzle::factory()->create(['category_id' => $crosswordCat->id]);
+        $p3->setters()->attach($crosswordOnlySetter->id);
+
+        // Mixed creator has 1 Variant Sudoku and 2 Cryptic Crosswords (3 total, 1 sudoku-only)
+        $p4 = Puzzle::factory()->create(['category_id' => $variantCat->id]);
+        $p4->setters()->attach($mixedSetter->id);
+        $p5 = Puzzle::factory()->create(['category_id' => $crosswordCat->id]);
+        $p5->setters()->attach($mixedSetter->id);
+        $p6 = Puzzle::factory()->create(['category_id' => $crosswordCat->id]);
+        $p6->setters()->attach($mixedSetter->id);
+
+        // Default (All Setters) shows all 4 setters and counts all 3 puzzles for Mixed Creator
+        $allResponse = $this->get(route('setters.index'));
+        $allResponse->assertStatus(200);
+        $allResponse->assertSee('All Setters');
+        $allResponse->assertSee('Variant &amp; Classic Sudoku', false);
+        $allResponse->assertSee('Variant Creator');
+        $allResponse->assertSee('Classic Creator');
+        $allResponse->assertSee('Crossword Only Creator');
+        $allResponse->assertSee('Mixed Creator');
+        $allSetters = $allResponse->viewData('setters');
+        $this->assertSame(4, $allSetters->total());
+        $this->assertSame(3, (int) $allSetters->getCollection()->firstWhere('id', $mixedSetter->id)->puzzles_count);
+
+        // With sudoku_only=1, Crossword Only Creator is hidden, total is 3, and Mixed Creator has puzzles_count = 1
+        $sudokuResponse = $this->get(route('setters.index', ['sudoku_only' => 1]));
+        $sudokuResponse->assertStatus(200);
+        $sudokuResponse->assertSee('Variant Creator');
+        $sudokuResponse->assertSee('Classic Creator');
+        $sudokuResponse->assertSee('Mixed Creator');
+        $sudokuResponse->assertDontSee('Crossword Only Creator');
+        $sudokuSetters = $sudokuResponse->viewData('setters');
+        $this->assertSame(3, $sudokuSetters->total());
+        $this->assertSame(1, (int) $sudokuSetters->getCollection()->firstWhere('id', $mixedSetter->id)->puzzles_count);
+    }
 }

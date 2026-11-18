@@ -23,6 +23,22 @@
             </div>
 
             <div class="flex items-center gap-3 flex-wrap">
+                {{-- Toggle: All Setters vs Variant & Classic Sudoku Only --}}
+                <div class="inline-flex rounded-lg bg-slate-900 p-1 border border-slate-800 text-xs font-medium" role="group" aria-label="Filter setters by puzzle type">
+                    <a
+                        href="{{ route('setters.index', array_filter(['sort' => $sort !== 'puzzles' ? $sort : null, 'dir' => $direction !== 'desc' ? $direction : null, 'q' => $search ?: null])) }}"
+                        class="px-3 py-1.5 rounded-md transition-colors {{ !$sudokuOnly ? 'bg-emerald-500/20 text-emerald-400 font-semibold' : 'text-slate-400 hover:text-white' }}"
+                    >
+                        All Setters
+                    </a>
+                    <a
+                        href="{{ route('setters.index', array_filter(['sort' => $sort !== 'puzzles' ? $sort : null, 'dir' => $direction !== 'desc' ? $direction : null, 'q' => $search ?: null, 'sudoku_only' => 1])) }}"
+                        class="px-3 py-1.5 rounded-md transition-colors {{ $sudokuOnly ? 'bg-emerald-500/20 text-emerald-400 font-semibold' : 'text-slate-400 hover:text-white' }}"
+                    >
+                        Variant &amp; Classic Sudoku
+                    </a>
+                </div>
+
                 <span id="setters-total-badge" class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300">
                     <span class="text-emerald-400 font-mono font-bold mr-1.5">{{ number_format($setters->total()) }}</span>
                     <span>Distinct {{ Str::plural('Setter', $setters->total()) }}</span>
@@ -40,6 +56,9 @@
             @if ($direction !== 'desc')
                 <input type="hidden" name="dir" value="{{ $direction }}">
             @endif
+            @if ($sudokuOnly)
+                <input type="hidden" name="sudoku_only" value="1">
+            @endif
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -55,7 +74,7 @@
                 class="w-full pl-9 @if($search !== '') pr-16 @else pr-4 @endif py-2 bg-slate-900/80 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
             />
             <a id="setter-search-clear"
-               href="{{ route('setters.index', array_filter(['sort' => $sort !== 'puzzles' ? $sort : null, 'dir' => $direction !== 'desc' ? $direction : null])) }}"
+               href="{{ route('setters.index', array_filter(['sort' => $sort !== 'puzzles' ? $sort : null, 'dir' => $direction !== 'desc' ? $direction : null, 'sudoku_only' => $sudokuOnly ? 1 : null])) }}"
                class="absolute inset-y-0 right-0 pr-3 flex items-center text-xs text-slate-400 hover:text-emerald-400 @if($search === '') hidden @endif"
                title="Clear search">
                 ✕ Clear
@@ -79,7 +98,7 @@
                     <tr>
                         {{-- 1. Name Column --}}
                         <th scope="col" class="py-3.5 pl-6 pr-4 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="name">
-                            <a href="{{ route('setters.index', array_filter(['sort' => 'name', 'dir' => ($sort === 'name' && $direction === 'asc') ? 'desc' : 'asc', 'q' => $search ?: null])) }}" class="inline-flex items-center gap-1.5">
+                            <a href="{{ route('setters.index', array_filter(['sort' => 'name', 'dir' => ($sort === 'name' && $direction === 'asc') ? 'desc' : 'asc', 'q' => $search ?: null, 'sudoku_only' => $sudokuOnly ? 1 : null])) }}" class="inline-flex items-center gap-1.5">
                                 <span>Setter Name</span>
                                 <span class="sort-indicator text-slate-500 group-hover:text-emerald-400 transition-colors">
                                     @if ($sort === 'name')
@@ -93,7 +112,7 @@
 
                         {{-- 2. Number of Puzzles Column --}}
                         <th scope="col" class="py-3.5 px-4 text-center cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="puzzles">
-                            <a href="{{ route('setters.index', array_filter(['sort' => 'puzzles', 'dir' => ($sort === 'puzzles' && $direction === 'desc') ? 'asc' : 'desc', 'q' => $search ?: null])) }}" class="inline-flex items-center gap-1.5 justify-center">
+                            <a href="{{ route('setters.index', array_filter(['sort' => 'puzzles', 'dir' => ($sort === 'puzzles' && $direction === 'desc') ? 'asc' : 'desc', 'q' => $search ?: null, 'sudoku_only' => $sudokuOnly ? 1 : null])) }}" class="inline-flex items-center gap-1.5 justify-center">
                                 <span>Puzzles</span>
                                 <span class="sort-indicator text-slate-500 group-hover:text-emerald-400 transition-colors">
                                     @if ($sort === 'puzzles')
@@ -107,7 +126,7 @@
 
                         {{-- 3. First Puzzle / Video on Channel --}}
                         <th scope="col" class="py-3.5 px-4 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="first">
-                            <a href="{{ route('setters.index', array_filter(['sort' => 'first', 'dir' => ($sort === 'first' && $direction === 'asc') ? 'desc' : 'asc', 'q' => $search ?: null])) }}" class="inline-flex items-center gap-1.5">
+                            <a href="{{ route('setters.index', array_filter(['sort' => 'first', 'dir' => ($sort === 'first' && $direction === 'asc') ? 'desc' : 'asc', 'q' => $search ?: null, 'sudoku_only' => $sudokuOnly ? 1 : null])) }}" class="inline-flex items-center gap-1.5">
                                 <span>First on Channel</span>
                                 <span class="sort-indicator text-slate-500 group-hover:text-emerald-400 transition-colors">
                                     @if ($sort === 'first')
@@ -121,7 +140,7 @@
 
                         {{-- 4. Most Recent Puzzle / Video on Channel --}}
                         <th scope="col" class="py-3.5 pl-4 pr-6 cursor-pointer hover:text-white transition-colors select-none group" data-sort-key="recent">
-                            <a href="{{ route('setters.index', array_filter(['sort' => 'recent', 'dir' => ($sort === 'recent' && $direction === 'desc') ? 'asc' : 'desc', 'q' => $search ?: null])) }}" class="inline-flex items-center gap-1.5">
+                            <a href="{{ route('setters.index', array_filter(['sort' => 'recent', 'dir' => ($sort === 'recent' && $direction === 'desc') ? 'asc' : 'desc', 'q' => $search ?: null, 'sudoku_only' => $sudokuOnly ? 1 : null])) }}" class="inline-flex items-center gap-1.5">
                                 <span>Most Recent on Channel</span>
                                 <span class="sort-indicator text-slate-500 group-hover:text-emerald-400 transition-colors">
                                     @if ($sort === 'recent')
@@ -404,11 +423,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const sortInput = searchForm.querySelector('input[name="sort"]');
         const dirInput = searchForm.querySelector('input[name="dir"]');
+        const sudokuInput = searchForm.querySelector('input[name="sudoku_only"]');
         if (sortInput && sortInput.value) {
             url.searchParams.set('sort', sortInput.value);
         }
         if (dirInput && dirInput.value) {
             url.searchParams.set('dir', dirInput.value);
+        }
+        if (sudokuInput && sudokuInput.value) {
+            url.searchParams.set('sudoku_only', sudokuInput.value);
         }
         if (query !== '') {
             url.searchParams.set('q', query);
