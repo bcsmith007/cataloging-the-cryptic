@@ -463,15 +463,20 @@
                         <div class="p-3 rounded-xl bg-slate-900/50 border border-slate-800/60 flex items-center justify-between gap-3">
                             <span class="text-slate-400 font-medium shrink-0">Most Common Music</span>
                             @if (!empty($h['top_music']))
-                                <div class="text-right min-w-0">
-                                    <div class="font-semibold text-slate-100 truncate">{{ $h['top_music']['track'] }}</div>
-                                    <div class="text-[11px] text-slate-400 font-mono">
-                                        {{ number_format($h['top_music']['count']) }} {{ Str::plural('use', $h['top_music']['count']) }}
-                                        @if (!empty($h['top_intro_music']) || !empty($h['top_outro_music']))
-                                            &bull; Intro: {{ $h['top_intro_music']['track'] ?? 'N/A' }}
-                                            &bull; Outro: {{ $h['top_outro_music']['track'] ?? 'N/A' }}
-                                        @endif
+                                <div class="text-right min-w-0 space-y-0.5">
+                                    <div class="font-semibold text-slate-100 truncate">
+                                        {{ $h['top_music']['track'] }} ({{ number_format($h['top_music']['count']) }} {{ Str::plural('use', $h['top_music']['count']) }})
                                     </div>
+                                    @if (!empty($h['top_intro_music']))
+                                        <div class="text-[11px] text-slate-400 font-mono truncate">
+                                            Intro: {{ $h['top_intro_music']['track'] }} - {{ number_format($h['top_intro_music']['count']) }} {{ Str::plural('use', $h['top_intro_music']['count']) }}
+                                        </div>
+                                    @endif
+                                    @if (!empty($h['top_outro_music']))
+                                        <div class="text-[11px] text-slate-400 font-mono truncate">
+                                            Outro: {{ $h['top_outro_music']['track'] }} - {{ number_format($h['top_outro_music']['count']) }} {{ Str::plural('use', $h['top_outro_music']['count']) }}
+                                        </div>
+                                    @endif
                                 </div>
                             @else
                                 <span class="text-slate-500 font-mono">N/A</span>

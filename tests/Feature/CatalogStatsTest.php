@@ -1199,7 +1199,11 @@ class CatalogStatsTest extends TestCase
         $response->assertSee('Thermo');
         $response->assertSee('Arrow');
         $response->assertSee('Mozart Sonata');
+        $response->assertSee('Intro: Mozart Sonata - 2 uses');
+        $response->assertSee('Outro: Bach Prelude - 1 use');
         $response->assertSee('Beethoven Op 13');
+        $response->assertSee('Intro: Beethoven Op 13 - 2 uses');
+        $response->assertSee('Outro: Beethoven Op 13 - 1 use');
         $response->assertSee('Phistomefel');
         $response->assertSee('Sam Cappleman-Lynes');
     }
