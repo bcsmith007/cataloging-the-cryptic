@@ -467,4 +467,30 @@ class ConstraintsPageTest extends TestCase
         $this->assertSame("**Standard Definition**\nShort rule.", $sections['standard']);
         $this->assertSame("**Extended Description**\nMore details.", $sections['extended']);
     }
+
+    /**
+     * Test that /constraints/random redirects to a constraint detail page (or index when empty)
+     * and the top navigation Random dropdown includes Random Video, Random Constraint, and Random Setter.
+     */
+    public function test_random_constraint_route_and_nav_dropdown(): void
+    {
+        $emptyResponse = $this->get(route('constraints.random'));
+        $emptyResponse->assertRedirect(route('constraints.index'));
+
+        $constraint = Constraint::factory()->create([
+            'name' => 'Dutch Whispers',
+            'slug' => 'dutch-whispers',
+        ]);
+
+        $response = $this->get(route('constraints.random'));
+        $response->assertRedirect(route('constraints.show', $constraint->slug));
+
+        $homeResponse = $this->get('/');
+        $homeResponse->assertStatus(200);
+        $homeResponse->assertSee('Random Video');
+        $homeResponse->assertSee('Random Constraint');
+        $homeResponse->assertSee('Random Setter');
+        $homeResponse->assertSee(route('constraints.random'));
+        $homeResponse->assertSee(route('setters.random'));
+    }
 }

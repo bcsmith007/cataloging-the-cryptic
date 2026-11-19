@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Constraint;
 use App\Models\Video;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -190,5 +191,19 @@ class ConstraintController extends Controller
             'totalViews',
             'puzzlesCount'
         ));
+    }
+
+    /**
+     * Redirect to a random constraint in the catalog.
+     */
+    public function random(): RedirectResponse
+    {
+        $constraint = Constraint::query()->inRandomOrder()->first();
+
+        if (! $constraint) {
+            return redirect()->route('constraints.index');
+        }
+
+        return redirect()->route('constraints.show', $constraint->slug);
     }
 }

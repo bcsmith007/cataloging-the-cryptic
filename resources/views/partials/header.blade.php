@@ -39,12 +39,28 @@
             <a href="{{ route('constraints.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('constraints*') ? 'text-emerald-400 font-semibold' : '' }}">Constraints</a>
             <a href="{{ route('apps.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('apps*') ? 'text-emerald-400 font-semibold' : '' }}">Apps</a>
             <a href="{{ route('stats') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors {{ request()->routeIs('stats*') ? 'text-emerald-400 font-semibold' : '' }}">Stats</a>
-            <a href="{{ route('videos.random') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors flex items-center gap-1.5" title="Take me to a random video">
-                <svg width="14" height="14" class="ctc-shuffle-icon ctc-beaker-icon w-3.5 h-3.5 text-emerald-400" style="width: 14px; height: 14px; min-width: 14px; min-height: 14px; max-width: 14px; max-height: 14px; display: inline-block; vertical-align: middle;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 4h4v4M18 20h4v-4M2 18h3a5 5 0 004-2l6-8a5 5 0 014-2h3M2 6h3a5 5 0 014 2l6 8a5 5 0 004 2h3" />
-                </svg>
-                <span>Random</span>
-            </a>
+            <div class="ctc-nav-dropdown group">
+                <a href="{{ route('videos.random') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors flex items-center gap-1.5" title="Take me to a random video" aria-haspopup="true" aria-expanded="false">
+                    <svg width="14" height="14" class="ctc-shuffle-icon ctc-beaker-icon w-3.5 h-3.5 text-emerald-400" style="width: 14px; height: 14px; min-width: 14px; min-height: 14px; max-width: 14px; max-height: 14px; display: inline-block; vertical-align: middle;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 4h4v4M18 20h4v-4M2 18h3a5 5 0 004-2l6-8a5 5 0 014-2h3M2 6h3a5 5 0 014 2l6 8a5 5 0 004 2h3" />
+                    </svg>
+                    <span>Random</span>
+                    <svg class="ctc-nav-caret" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </a>
+                <div class="ctc-dropdown-menu" role="menu" aria-label="Random menu">
+                    <a href="{{ route('videos.random') }}" class="ctc-dropdown-item" role="menuitem">
+                        Random Video
+                    </a>
+                    <a href="{{ route('constraints.random') }}" class="ctc-dropdown-item" role="menuitem">
+                        Random Constraint
+                    </a>
+                    <a href="{{ route('setters.random') }}" class="ctc-dropdown-item" role="menuitem">
+                        Random Setter
+                    </a>
+                </div>
+            </div>
             <a href="{{ route('search') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 {{ request()->routeIs('search*') ? 'text-emerald-400 font-semibold' : '' }}" title="Search the catalog">
                 <svg width="14" height="14" class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -135,6 +151,12 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 4h4v4M18 20h4v-4M2 18h3a5 5 0 004-2l6-8a5 5 0 014-2h3M2 6h3a5 5 0 014 2l6 8a5 5 0 004 2h3" />
                 </svg>
                 <span>Random Video</span>
+            </a>
+            <a href="{{ route('constraints.random') }}" class="ctc-mobile-nav-link">
+                <span>Random Constraint</span>
+            </a>
+            <a href="{{ route('setters.random') }}" class="ctc-mobile-nav-link">
+                <span>Random Setter</span>
             </a>
             <a href="{{ route('search') }}" class="ctc-mobile-nav-link {{ request()->routeIs('search*') ? 'active' : '' }}">
                 <svg width="14" height="14" class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

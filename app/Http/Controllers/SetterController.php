@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Setter;
 use App\Models\Video;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -181,5 +182,19 @@ class SetterController extends Controller
             ->paginate(24);
 
         return view('setters.show', compact('setter', 'videos'));
+    }
+
+    /**
+     * Redirect to a random setter in the catalog.
+     */
+    public function random(): RedirectResponse
+    {
+        $setter = Setter::query()->inRandomOrder()->first();
+
+        if (! $setter) {
+            return redirect()->route('setters.index');
+        }
+
+        return redirect()->route('setters.show', $setter->slug);
     }
 }

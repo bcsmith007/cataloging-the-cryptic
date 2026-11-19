@@ -26,8 +26,10 @@ Route::get('/videos/stats', fn (): RedirectResponse => redirect()->route('stats'
 Route::get('/videos/{record}/edit', fn (Video $record): RedirectResponse => redirect()->route('filament.admin.resources.videos.edit', ['record' => $record]))->name('videos.edit');
 Route::get('/videos/{slug}', [VideoController::class, 'show'])->name('videos.show');
 Route::get('/setters', [SetterController::class, 'index'])->name('setters.index');
+Route::get('/setters/random', [SetterController::class, 'random'])->name('setters.random');
 Route::get('/setters/{setter}', [SetterController::class, 'show'])->name('setters.show');
 Route::get('/constraints', [ConstraintController::class, 'index'])->name('constraints.index');
+Route::get('/constraints/random', [ConstraintController::class, 'random'])->name('constraints.random');
 Route::get('/constraints/{constraint}', [ConstraintController::class, 'show'])->name('constraints.show');
 Route::get('/contraints', fn (): RedirectResponse => redirect()->route('constraints.index', [], 301));
 Route::get('/contraints/{constraint}', fn (string $constraint): RedirectResponse => redirect()->route('constraints.show', ['constraint' => $constraint], 301));

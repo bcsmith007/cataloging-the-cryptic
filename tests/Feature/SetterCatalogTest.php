@@ -378,4 +378,21 @@ class SetterCatalogTest extends TestCase
         $this->assertSame(3, $sudokuSetters->total());
         $this->assertSame(1, (int) $sudokuSetters->getCollection()->firstWhere('id', $mixedSetter->id)->puzzles_count);
     }
+
+    /**
+     * Test that /setters/random redirects to a setter detail page (or index when empty).
+     */
+    public function test_random_setter_route_redirects_to_setter_or_index(): void
+    {
+        $emptyResponse = $this->get(route('setters.random'));
+        $emptyResponse->assertRedirect(route('setters.index'));
+
+        $setter = Setter::factory()->create([
+            'name' => 'Phistomefel',
+            'slug' => 'phistomefel',
+        ]);
+
+        $response = $this->get(route('setters.random'));
+        $response->assertRedirect(route('setters.show', $setter->slug));
+    }
 }
