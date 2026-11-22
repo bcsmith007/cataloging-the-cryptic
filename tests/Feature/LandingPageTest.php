@@ -412,6 +412,6 @@ class LandingPageTest extends TestCase
         $response->assertSee('>Videos</h3>', false);
         $response->assertSee('>Directory</h3>', false);
         $response->assertSee('>Resources</h3>', false);
-        $response->assertSee('>Account</h3>', false);
+        $response->assertDontSee('>Account</h3>', false);
     }
 }
