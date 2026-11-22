@@ -608,9 +608,11 @@ class AdminPanelTest extends TestCase
         $options = VideoForm::getMusicOptions();
 
         $this->assertCount(3, $options);
-        $this->assertArrayHasKey('Equinox (CTC Theme)', $options);
-        $this->assertArrayHasKey('Nocturne in C Minor', $options);
-        $this->assertArrayHasKey('Acoustic Sunrise', $options);
+        $this->assertSame([
+            'Equinox (CTC Theme)',
+            'Acoustic Sunrise',
+            'Nocturne in C Minor',
+        ], array_keys($options));
     }
 
     /**

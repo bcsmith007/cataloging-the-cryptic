@@ -24,6 +24,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\Alignment;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 
 /**
@@ -526,30 +527,54 @@ class VideoForm
     }
 
     /**
-     * Get distinct list of all previously recorded intro and outro music tracks.
+     * Get distinct list of all previously recorded intro and outro music tracks,
+     * ordered by usage frequency descending (with alphabetical tie-breaking).
      *
      * @return array<string, string>
      */
     public static function getMusicOptions(): array
     {
-        $intro = Video::query()
+        $introCounts = DB::table('videos')
             ->whereNotNull('intro_music')
             ->where('intro_music', '!=', '')
-            ->distinct()
-            ->pluck('intro_music')
+            ->selectRaw('intro_music, count(*) as usage_count')
+            ->groupBy('intro_music')
+            ->pluck('usage_count', 'intro_music')
             ->toArray();
 
-        $outro = Video::query()
+        $outroCounts = DB::table('videos')
             ->whereNotNull('outro_music')
             ->where('outro_music', '!=', '')
-            ->distinct()
-            ->pluck('outro_music')
+            ->selectRaw('outro_music, count(*) as usage_count')
+            ->groupBy('outro_music')
+            ->pluck('usage_count', 'outro_music')
             ->toArray();
 
-        $combined = array_unique(array_filter(array_merge($intro, $outro)));
-        natcasesort($combined);
+        $usageCounts = [];
+        foreach ($introCounts as $track => $count) {
+            $trimmed = trim((string) $track);
+            if ($trimmed !== '') {
+                $usageCounts[$trimmed] = ($usageCounts[$trimmed] ?? 0) + (int) $count;
+            }
+        }
+        foreach ($outroCounts as $track => $count) {
+            $trimmed = trim((string) $track);
+            if ($trimmed !== '') {
+                $usageCounts[$trimmed] = ($usageCounts[$trimmed] ?? 0) + (int) $count;
+            }
+        }
 
-        return ! empty($combined) ? array_combine($combined, $combined) : [];
+        $tracks = array_keys($usageCounts);
+        usort($tracks, function (string $a, string $b) use ($usageCounts): int {
+            $countComparison = $usageCounts[$b] <=> $usageCounts[$a];
+            if ($countComparison !== 0) {
+                return $countComparison;
+            }
+
+            return strnatcasecmp($a, $b);
+        });
+
+        return ! empty($tracks) ? array_combine($tracks, $tracks) : [];
     }
 
     /**
