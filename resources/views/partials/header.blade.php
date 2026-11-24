@@ -14,7 +14,7 @@
         {{-- Desktop Navigation (hidden on mobile, visible on desktop >= 1024px) --}}
         <nav class="ctc-desktop-nav flex items-center space-x-6 text-sm font-medium">
             <div class="ctc-nav-dropdown group">
-                <a href="{{ route('videos.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors flex items-center gap-1 {{ request()->routeIs(['videos.index', 'videos.top', 'videos.longest', 'videos.shortest']) ? 'text-emerald-400 font-semibold' : '' }}" aria-haspopup="true" aria-expanded="false">
+                <a href="{{ route('videos.index') }}" class="ctc-nav-link text-slate-400 hover:text-white transition-colors flex items-center gap-1 {{ request()->routeIs(['videos.index', 'videos.top', 'videos.least_viewed', 'videos.longest', 'videos.shortest']) ? 'text-emerald-400 font-semibold' : '' }}" aria-haspopup="true" aria-expanded="false">
                     <span>Videos</span>
                     <svg class="ctc-nav-caret" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
@@ -26,6 +26,9 @@
                     </a>
                     <a href="{{ route('videos.top') }}" class="ctc-dropdown-item {{ request()->routeIs('videos.top') ? 'active' : '' }}" role="menuitem">
                         Most Viewed
+                    </a>
+                    <a href="{{ route('videos.least_viewed') }}" class="ctc-dropdown-item {{ request()->routeIs('videos.least_viewed') ? 'active' : '' }}" role="menuitem">
+                        Least Viewed
                     </a>
                     <a href="{{ route('videos.longest') }}" class="ctc-dropdown-item {{ request()->routeIs('videos.longest') ? 'active' : '' }}" role="menuitem">
                         Longest
@@ -127,6 +130,9 @@
             </a>
             <a href="{{ route('videos.top') }}" class="ctc-mobile-nav-link {{ request()->routeIs('videos.top') ? 'active' : '' }}">
                 <span>Most Viewed</span>
+            </a>
+            <a href="{{ route('videos.least_viewed') }}" class="ctc-mobile-nav-link {{ request()->routeIs('videos.least_viewed') ? 'active' : '' }}">
+                <span>Least Viewed</span>
             </a>
             <a href="{{ route('videos.longest') }}" class="ctc-mobile-nav-link {{ request()->routeIs('videos.longest') ? 'active' : '' }}">
                 <span>Longest</span>

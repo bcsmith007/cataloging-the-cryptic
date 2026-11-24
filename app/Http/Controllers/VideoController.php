@@ -81,6 +81,35 @@ class VideoController extends Controller
     }
 
     /**
+     * Display the 24 least viewed videos with positive view counts, optionally filtered by host.
+     */
+    public function leastViewed(Request $request): View
+    {
+        [$currentHost, $currentHostSlug, $currentHostName] = $this->resolveHostFilter($request);
+
+        $query = Video::query()
+            ->publiclyVisible()
+            ->with(['hosts', 'puzzles.category', 'patreonPost'])
+            ->where('access_level', '!=', 'exclusive')
+            ->where('video_type', '!=', 'patreon')
+            ->where('view_count', '>', 0);
+
+        if ($currentHost) {
+            $query->whereHas('hosts', fn ($q) => $q->where('hosts.id', $currentHost->id));
+        } elseif ($currentHostSlug) {
+            $query->whereHas('hosts', fn ($q) => $q->where('slug', $currentHostSlug)->orWhereRaw('LOWER(name) LIKE ?', ['%'.$currentHostSlug.'%']));
+        }
+
+        $videos = $query
+            ->orderBy('view_count', 'asc')
+            ->orderByEffectivePublishedAt('desc')
+            ->take(24)
+            ->get();
+
+        return view('videos.least-viewed', compact('videos', 'currentHost', 'currentHostSlug', 'currentHostName'));
+    }
+
+    /**
      * Display the top 24 longest videos in the catalog, excluding live stream replays,
      * optionally filtered by host (e.g. Simon Anthony or Mark Goodliffe).
      */

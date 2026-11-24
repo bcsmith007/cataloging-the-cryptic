@@ -375,6 +375,95 @@ class VideoCatalogTest extends TestCase
     }
 
     /**
+     * Test that /videos/least-viewed displays the 24 least viewed videos ordered by views ascending,
+     * excluding zero-view and private videos.
+     */
+    public function test_least_viewed_videos_page_displays_24_least_viewed_excluding_zero_views(): void
+    {
+        // Zero-view video (e.g., unsynced Patreon video) must be excluded
+        Video::factory()->create([
+            'title' => 'Zero View Video',
+            'view_count' => 0,
+        ]);
+
+        // Private low-view video must be excluded
+        Video::factory()->create([
+            'title' => 'Private Low View Video',
+            'access_level' => 'private',
+            'view_count' => 5,
+        ]);
+
+        // Patreon exclusive low-view video must be excluded
+        Video::factory()->create([
+            'title' => 'Patreon Exclusive Low View Video',
+            'access_level' => 'exclusive',
+            'video_type' => 'patreon',
+            'view_count' => 10,
+        ]);
+
+        // Create 28 videos with ascending view counts (100, 200, ..., 2800)
+        for ($i = 1; $i <= 28; $i++) {
+            $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+            Video::factory()->create([
+                'title' => "Least Viewed Candidate {$num}",
+                'view_count' => $i * 100,
+            ]);
+        }
+
+        $response = $this->get(route('videos.least_viewed'));
+        $response->assertStatus(200);
+        $response->assertSee('24 Least Viewed Videos');
+        $response->assertDontSee('Zero View Video');
+        $response->assertDontSee('Private Low View Video');
+        $response->assertDontSee('Patreon Exclusive Low View Video');
+
+        $content = $response->getContent();
+        $firstPos = strpos($content, 'Least Viewed Candidate 01');
+        $midPos = strpos($content, 'Least Viewed Candidate 12');
+        $lastPos = strpos($content, 'Least Viewed Candidate 24');
+
+        $this->assertNotFalse($firstPos);
+        $this->assertNotFalse($midPos);
+        $this->assertNotFalse($lastPos);
+        $this->assertTrue($firstPos < $midPos);
+        $this->assertTrue($midPos < $lastPos);
+
+        // Candidates 25 through 28 should not be in the 24 least viewed
+        $response->assertDontSee('Least Viewed Candidate 25');
+        $response->assertDontSee('Least Viewed Candidate 28');
+    }
+
+    /**
+     * Test that /videos/least-viewed supports host filtering and appears in the Videos dropdown menu.
+     */
+    public function test_least_viewed_videos_supports_host_filtering_and_nav_links(): void
+    {
+        $simon = Host::factory()->create(['name' => 'Simon Anthony', 'slug' => 'simon-anthony']);
+        $mark = Host::factory()->create(['name' => 'Mark Goodliffe', 'slug' => 'mark-goodliffe']);
+
+        $simonVideo = Video::factory()->create(['title' => 'Simon Quiet Solve', 'view_count' => 150]);
+        $simonVideo->hosts()->attach($simon->id);
+
+        $markVideo = Video::factory()->create(['title' => 'Mark Quiet Solve', 'view_count' => 250]);
+        $markVideo->hosts()->attach($mark->id);
+
+        $homeResponse = $this->get('/');
+        $homeResponse->assertStatus(200);
+        $homeResponse->assertSee('Least Viewed');
+        $homeResponse->assertSee(route('videos.least_viewed'));
+
+        $simonResponse = $this->get(route('videos.least_viewed', ['host' => 'simon']));
+        $simonResponse->assertStatus(200);
+        $simonResponse->assertSee('Simon Quiet Solve');
+        $simonResponse->assertDontSee('Mark Quiet Solve');
+
+        $markResponse = $this->get(route('videos.least_viewed', ['host' => 'mark']));
+        $markResponse->assertStatus(200);
+        $markResponse->assertSee('Mark Quiet Solve');
+        $markResponse->assertDontSee('Simon Quiet Solve');
+    }
+
+    /**
      * Test that /videos/longest displays the top 24 longest videos excluding live streams.
      */
     public function test_longest_videos_page_displays_top_24_excluding_live_streams(): void

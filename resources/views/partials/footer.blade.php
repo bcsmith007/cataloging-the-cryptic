@@ -6,6 +6,7 @@
                 <ul class="ctc-footer-list space-y-2">
                     <li><a href="{{ route('videos.index') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">All Videos</a></li>
                     <li><a href="{{ route('videos.top') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Most Viewed</a></li>
+                    <li><a href="{{ route('videos.least_viewed') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Least Viewed</a></li>
                     <li><a href="{{ route('videos.longest') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Longest</a></li>
                     <li><a href="{{ route('videos.shortest') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Shortest</a></li>
                     <li><a href="{{ route('videos.random') }}" class="text-slate-400 hover:text-emerald-400 transition-colors">Random</a></li>

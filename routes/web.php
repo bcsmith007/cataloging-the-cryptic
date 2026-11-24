@@ -18,6 +18,7 @@ Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/videos', [VideoController::class, 'index'])->name('videos.index');
 Route::get('/videos/top', [VideoController::class, 'top'])->name('videos.top');
 Route::get('/videos/most-viewed', fn (Request $request): RedirectResponse => redirect()->route('videos.top', $request->query(), 301));
+Route::get('/videos/least-viewed', [VideoController::class, 'leastViewed'])->name('videos.least_viewed');
 Route::get('/videos/longest', [VideoController::class, 'longest'])->name('videos.longest');
 Route::get('/videos/shortest', [VideoController::class, 'shortest'])->name('videos.shortest');
 Route::get('/videos/random', [VideoController::class, 'random'])->name('videos.random');
