@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Constraint;
 use App\Models\Puzzle;
 use App\Models\Video;
+use App\Support\MarkdownMathRenderer;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -492,5 +493,52 @@ class ConstraintsPageTest extends TestCase
         $homeResponse->assertSee('Random Setter');
         $homeResponse->assertSee(route('constraints.random'));
         $homeResponse->assertSee(route('setters.random'));
+    }
+
+    /**
+     * Test that constraint rule definitions protect KaTeX math from Markdown emphasis mangling
+     * and clean literal escaped Markdown characters pasted from Google Docs.
+     */
+    public function test_constraint_markdown_protects_katex_math_and_cleans_google_docs_escapes(): void
+    {
+        $raw = implode("\n\n", [
+            '### Standard Definition',
+            'Adjacent cells $r_1c_1 + r_2c_2 = 10$ and $a_i < b_j$ apply with **bold** and *italic* text. Costs $ 5 or $$ empty.',
+            '$$\sum_{k=1}^{9} x_k = 45$$',
+            '\#\# Extended Description',
+            '\* First item with \*escaped\* stars and $d_1 + d_2$.',
+        ]);
+
+        $html = MarkdownMathRenderer::render($raw);
+
+        // Subscripts inside math must NOT become <em> tags
+        $this->assertStringContainsString('$r_1c_1 + r_2c_2 = 10$', $html);
+        $this->assertStringContainsString('$a_i &lt; b_j$', $html);
+        $this->assertStringContainsString('$$\sum_{k=1}^{9} x_k = 45$$', $html);
+        $this->assertStringNotContainsString('<em>1c</em>', $html);
+        $this->assertStringNotContainsString('<em>i</em>', $html);
+        $this->assertStringNotContainsString('<em>k=1</em>', $html);
+
+        // Normal Markdown & Google Docs unescaping must still render properly
+        $this->assertStringContainsString('<strong>bold</strong>', $html);
+        $this->assertStringContainsString('<em>italic</em>', $html);
+        $this->assertStringContainsString('<h2>Extended Description</h2>', $html);
+        $this->assertStringNotContainsString('\#\#', $html);
+        $this->assertStringNotContainsString('\*', $html);
+
+        // Verify /constraints/{slug} renders both Standard and Extended sections cleanly
+        $constraint = Constraint::factory()->create([
+            'name' => 'Math Protected Rule',
+            'slug' => 'math-protected-rule',
+            'description' => $raw,
+        ]);
+
+        $response = $this->get(route('constraints.show', $constraint->slug));
+        $response->assertStatus(200);
+        $response->assertSee('$r_1c_1 + r_2c_2 = 10$', false);
+        $response->assertSee('$$\sum_{k=1}^{9} x_k = 45$$', false);
+        $response->assertSee('<h2>Extended Description</h2>', false);
+        $response->assertDontSee('<em>1c</em>', false);
+        $response->assertDontSee('\#\#', false);
     }
 }

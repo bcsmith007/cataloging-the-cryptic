@@ -152,7 +152,7 @@
                     @forelse ($constraints as $constraint)
                         <tr class="constraint-row hover:bg-slate-800/40 transition-colors group"
                             data-name="{{ strtolower($constraint->name) }}"
-                            data-description="{{ strtolower(strip_tags(Str::markdown($constraint->description ?? '', ['html_input' => 'strip', 'allow_unsafe_links' => false]))) }}"
+                            data-description="{{ strtolower(strip_tags(\App\Support\MarkdownMathRenderer::render($constraint->description ?? ''))) }}"
                             data-videos="{{ $constraint->videos_count }}"
                             data-puzzles="{{ $constraint->puzzles_count }}"
                             data-first="{{ $constraint->first_date?->timestamp ?? 0 }}"
@@ -166,7 +166,7 @@
                                     </a>
                                     @if ($constraint->description)
                                         <div class="ctc-markdown-content ctc-markdown-preview mt-1 leading-relaxed">
-                                            {!! Str::markdown($constraint->description, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                                            {!! \App\Support\MarkdownMathRenderer::render($constraint->description) !!}
                                         </div>
                                     @else
                                         <p class="text-xs text-slate-500 italic mt-1">

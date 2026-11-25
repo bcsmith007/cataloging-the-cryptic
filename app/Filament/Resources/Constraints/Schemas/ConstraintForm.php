@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Constraints\Schemas;
 
 use App\Models\Constraint;
+use App\Support\MarkdownMathRenderer;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
@@ -58,6 +59,7 @@ class ConstraintForm
 
             MarkdownEditor::make('description')
                 ->label('Description / Rules')
+                ->dehydrateStateUsing(fn (?string $state): ?string => MarkdownMathRenderer::cleanGoogleDocsEscapes($state))
                 ->toolbarButtons([
                     'bold',
                     'italic',

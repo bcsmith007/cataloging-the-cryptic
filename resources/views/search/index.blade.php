@@ -327,7 +327,7 @@
                                 </div>
                                 @if (!empty($constraint->description))
                                     <div class="ctc-markdown-content ctc-markdown-preview">
-                                        {!! Str::markdown($constraint->description, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                                        {!! \App\Support\MarkdownMathRenderer::render($constraint->description) !!}
                                     </div>
                                 @endif
                             </div>

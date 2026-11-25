@@ -55,7 +55,7 @@
                         @if ($constraint->description)
                             @if ($standardDefinition !== '')
                                 <div class="ctc-markdown-content text-sm text-slate-300 leading-relaxed max-w-3xl">
-                                    {!! Str::markdown($standardDefinition, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                                    {!! \App\Support\MarkdownMathRenderer::render($standardDefinition) !!}
                                 </div>
                             @endif
 
@@ -64,7 +64,7 @@
                                     id="constraint-extended-definition"
                                     class="hidden mt-4 pt-4 border-t border-slate-800/80 ctc-markdown-content text-sm text-slate-300 leading-relaxed max-w-3xl"
                                 >
-                                    {!! Str::markdown($extendedDefinition, ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                                    {!! \App\Support\MarkdownMathRenderer::render($extendedDefinition) !!}
                                 </div>
 
                                 <button
